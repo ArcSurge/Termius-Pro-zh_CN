@@ -30,9 +30,9 @@ class TermiusModifier:
 
     @property
     def _unpack_dir(self):
-        """解包文件输出目录（脚本同级目录）"""
+        """解包文件输出目录（脚本同级目录/extract）"""
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        return os.path.join(script_dir, "app.asar.unpack")
+        return os.path.join(script_dir, "extract", "app.asar.unpack")
 
     @property
     def _rules_dir(self):
@@ -72,8 +72,9 @@ class TermiusModifier:
         cmd = f'asar extract {self._original_path} {self._app_dir}'
         run_command(cmd, shell=True)
 
-        # 新增：复制解包文件到脚本目录下的指定文件夹
-        self.copy_unpacked_files()
+        # 只有在执行 --find extract 时才复制和提取文件
+        if self.args.find and len(self.args.find) == 1 and self.args.find[0].lower() == "extract":
+            self.copy_unpacked_files()
 
     def copy_unpacked_files(self):
         """将解包文件复制到脚本目录下的指定文件夹"""
@@ -94,12 +95,13 @@ class TermiusModifier:
             logging.error(f"复制解包文件失败|Failed to copy unpacked files: {e}")
 
     def extract_all_strings(self):
-        """提取所有JSON和JS文件中的字符串到rules目录"""
+        """提取所有JSON和JS文件中的字符串到extract目录"""
         try:
-            # 确保rules目录存在
-            os.makedirs(self._rules_dir, exist_ok=True)
+            # 确保extract目录存在
+            extract_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "extract")
+            os.makedirs(extract_dir, exist_ok=True)
 
-            all_strings_file = os.path.join(self._rules_dir, "allstrings.txt")
+            all_strings_file = os.path.join(extract_dir, "allstring.txt")
 
             # 收集所有字符串
             all_strings = set()
@@ -287,10 +289,18 @@ class TermiusModifier:
 
     def find_in_content(self):
         """文件内容搜索功能"""
+        find_terms = self.args.find
+        
+        # 如果参数是 "extract"，则执行解包和提取字符串功能
+        if find_terms and len(find_terms) == 1 and find_terms[0].lower() == "extract":
+            self.extract_and_unpack()
+            return
+        
+        # 原有的搜索功能
         code_files = self.collect_code_files()
         if not os.path.exists(self._app_dir):
             self.decompress_asar()
-        find_terms = self.args.find
+        
         found_files = []
         for file_path in code_files:
             file_content = read_file(file_path, strip_empty=False)
@@ -323,6 +333,23 @@ class TermiusModifier:
             logging.warning(f"{terms_list}")
             logging.warning(f"没有在解包文件中搜索到目标|No files contain all the above terms.")
             logging.warning(f"{separator}")
+    
+    def extract_and_unpack(self):
+        """执行解包和提取字符串功能"""
+        logging.info("开始执行解包和字符串提取...|Starting unpack and string extraction...")
+        start_time = time.monotonic()
+        
+        # 创建备份
+        self.create_backup()
+        
+        # 解包 asar 文件
+        self.decompress_asar()
+        
+        # 复制解包文件并提取字符串
+        self.copy_unpacked_files()
+        
+        elapsed = time.monotonic() - start_time
+        logging.info(f"解包和字符串提取在 {elapsed:.2f} 秒内完成|Unpack and string extraction done in {elapsed:.2f} seconds.")
 
 
 def run_command(cmd, shell=False):

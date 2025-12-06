@@ -28,6 +28,18 @@ class TermiusModifier:
     def _app_dir(self):
         return os.path.join(self.termius_path, "app")
 
+    @property
+    def _unpack_dir(self):
+        """解包文件输出目录（脚本同级目录）"""
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        return os.path.join(script_dir, "app.asar.unpack")
+
+    @property
+    def _rules_dir(self):
+        """规则文件目录"""
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        return os.path.join(script_dir, "rules")
+
     def __init__(self, termius_path, args):
         """初始化修改器实例"""
         self.termius_path = termius_path
@@ -60,6 +72,90 @@ class TermiusModifier:
         cmd = f'asar extract {self._original_path} {self._app_dir}'
         run_command(cmd, shell=True)
 
+        # 新增：复制解包文件到脚本目录下的指定文件夹
+        self.copy_unpacked_files()
+
+    def copy_unpacked_files(self):
+        """将解包文件复制到脚本目录下的指定文件夹"""
+        try:
+            # 如果目标目录已存在，先删除
+            if os.path.exists(self._unpack_dir):
+                shutil.rmtree(self._unpack_dir)
+                logging.debug(f"Removed existing unpack directory: {self._unpack_dir}")
+
+            # 复制整个解包目录
+            shutil.copytree(self._app_dir, self._unpack_dir)
+            logging.info(f"解包文件已复制到|Unpacked files copied to: {self._unpack_dir}")
+
+            # 提取所有JSON和JS文件中的字符串
+            self.extract_all_strings()
+
+        except Exception as e:
+            logging.error(f"复制解包文件失败|Failed to copy unpacked files: {e}")
+
+    def extract_all_strings(self):
+        """提取所有JSON和JS文件中的字符串到rules目录"""
+        try:
+            # 确保rules目录存在
+            os.makedirs(self._rules_dir, exist_ok=True)
+
+            all_strings_file = os.path.join(self._rules_dir, "allstrings.txt")
+
+            # 收集所有字符串
+            all_strings = set()
+
+            # 遍历解包目录中的所有文件
+            for root, dirs, files in os.walk(self._unpack_dir):
+                for file in files:
+                    if file.endswith(('.js', '.json')):
+                        file_path = os.path.join(root, file)
+                        try:
+                            with open(file_path, 'r', encoding='utf-8') as f:
+                                content = f.read()
+
+                                # 提取双引号字符串
+                                double_quoted_strings = re.findall(r'"([^"\\]*(?:\\.[^"\\]*)*)"', content)
+
+                                # 提取单引号字符串
+                                single_quoted_strings = re.findall(r"'([^'\\]*(?:\\.[^'\\]*)*)'", content)
+
+                                # 提取模板字符串
+                                template_strings = re.findall(r'`([^`\\]*(?:\\.[^`\\]*)*)`', content)
+
+                                # 添加到集合中
+                                all_strings.update(double_quoted_strings)
+                                all_strings.update(single_quoted_strings)
+                                all_strings.update(template_strings)
+
+                        except Exception as e:
+                            logging.debug(f"无法读取文件|Cannot read file {file_path}: {e}")
+                            continue
+
+            # 过滤和排序字符串
+            filtered_strings = sorted([
+                s for s in all_strings
+                if len(s) > 1 and not s.isspace() and not re.match(r'^[0-9\.\+\-]*$', s)
+            ], key=lambda x: (len(x), x.lower()))
+
+            # 写入文件
+            with open(all_strings_file, 'w', encoding='utf-8') as f:
+                f.write("# 从app.asar中提取的所有字符串\n")
+                f.write("# All strings extracted from app.asar\n")
+                f.write(f"# 总计: {len(filtered_strings)} 个字符串\n")
+                f.write(f"# Total: {len(filtered_strings)} strings\n")
+                f.write("=" * 80 + "\n\n")
+
+                for i, string in enumerate(filtered_strings, 1):
+                    # 转义特殊字符以便于阅读
+                    escaped_string = string.replace('\n', '\\n').replace('\t', '\\t').replace('\r', '\\r')
+                    f.write(f"{i:4}. {escaped_string}\n")
+
+            logging.info(f"字符串提取完成|String extraction completed: {all_strings_file}")
+            logging.info(f"提取到 {len(filtered_strings)} 个字符串|Extracted {len(filtered_strings)} strings")
+
+        except Exception as e:
+            logging.error(f"字符串提取失败|Failed to extract strings: {e}")
+
     def pack_to_asar(self):
         """打包 app.asar 文件"""
         cmd = f'asar pack {self._app_dir} {self._original_path} --unpack-dir "{{node_modules/@termius,out}}"'
@@ -72,7 +168,7 @@ class TermiusModifier:
             return
 
         shutil.copy(self._backup_path, self._original_path)
-        logging.info("Restored from backup.")
+        logging.info("已从备份恢复|Restored from backup.")
 
     def create_backup(self):
         """智能备份管理（仅在缺失时创建）"""
@@ -136,18 +232,18 @@ class TermiusModifier:
 
     def replace_rules(self):
         """规则替换"""
-        logging.info("Starting replacement...")
+        logging.info("开始替换汉化规则...|Starting replacement...")
         for file_path in self.files_cache:
             self.files_cache[file_path] = self.replace_content(self.files_cache[file_path])
-        logging.info("Replacement completed.")
+        logging.info("替换完成|Replacement completed.")
 
     def write_files(self):
         """将修改后的内容写入文件"""
-        logging.info("Starting writing...")
+        logging.info("开始写入...|Starting writing...")
         for file_path, content in self.files_cache.items():
             with open(file_path, "w", encoding="utf-8") as file:
                 file.write(content)
-        logging.info("Writing completed.")
+        logging.info("写入完成|Writing completed.")
 
     def collect_code_files(self):
         """获取所有代码文件路径"""
@@ -177,9 +273,9 @@ class TermiusModifier:
         self.pack_to_asar()
         apply_macos_fix()
         elapsed = time.monotonic() - start_time
-        logging.info(f"Replacement done in {elapsed:.2f} seconds.")
+        logging.info(f"汉化在 {elapsed:.2f} 秒内完成|Replacement done in {elapsed:.2f} seconds.")
 
-        logging.info(f"Rules applied: {len(self.applied_rules)}/{len(self.loaded_rules)}")
+        logging.info(f"应用规则|Rules applied: {len(self.applied_rules)}/{len(self.loaded_rules)}")
         unmatched_rules = list(filter(lambda x: x not in self.applied_rules, self.loaded_rules))
         if unmatched_rules:
             if len(unmatched_rules) > 3:
@@ -200,18 +296,41 @@ class TermiusModifier:
             file_content = read_file(file_path, strip_empty=False)
             if file_content and all(term in file_content for term in find_terms):
                 found_files.append(file_path)
+
+        # 创建分隔线
+        separator = "=" * 60
+
         if found_files:
-            logging.info(f"Found all terms {find_terms} in: {found_files}")
+            # 构建搜索项列表字符串
+            terms_list = "\n".join([f"  • {term}" for term in find_terms])
+            # 构建文件列表字符串
+            files_list = "\n".join([f"  • {file_path}" for file_path in found_files])
+
+            logging.info(f"{separator}")
+            logging.info(f"搜索结果|SEARCH RESULTS")
+            logging.info(f"{separator}")
+            logging.info(f"搜索目标|Search terms ({len(find_terms)}):")
+            logging.info(f"{terms_list}")
+            logging.info(f"在这些文件中找到|Found in files ({len(found_files)}):")
+            logging.info(f"\n{files_list}")
+            logging.info(f"{separator}")
         else:
-            logging.warning(f"No results found for terms {find_terms}.")
+            terms_list = "\n".join([f"  • {term}" for term in find_terms])
+            logging.warning(f"{separator}")
+            logging.warning("无结果|NO RESULTS FOUND")
+            logging.warning(f"{separator}")
+            logging.warning(f"搜索目标|Search terms ({len(find_terms)}):")
+            logging.warning(f"{terms_list}")
+            logging.warning(f"没有在解包文件中搜索到目标|No files contain all the above terms.")
+            logging.warning(f"{separator}")
 
 
 def run_command(cmd, shell=False):
     """执行系统命令"""
     if isinstance(cmd, list):
-        logging.info(f"Running command: {' '.join(cmd)}")
+        logging.info(f"运行命令|Running command: {' '.join(cmd)}")
     else:
-        logging.info(f"Running command: {cmd}")
+        logging.info(f"运行命令|Running command: {cmd}")
     try:
         subprocess.run(cmd, shell=shell, check=True)
     except subprocess.CalledProcessError as e:
@@ -338,11 +457,14 @@ def main():
     parser = argparse.ArgumentParser(description="Modify Termius application.")
     parser.add_argument("-t", "--trial", action="store_true", help="Activate professional edition trial.")
     parser.add_argument("-k", "--skip-login", action="store_true", help="Disable authentication workflow.")
-    parser.add_argument("-l", "--localize", action="store_true", help="Enable localization patch (Chinese translation/adaptation).")
+    parser.add_argument("-l", "--localize", action="store_true",
+                        help="Enable localization patch (Chinese translation/adaptation).")
     parser.add_argument("-s", "--style", action="store_true", help="UI/UX customization preset.")
     parser.add_argument("-r", "--restore", action="store_true", help="Restore software to initial state.")
     parser.add_argument("-f", "--find", nargs="+", help="Multi-mode search operation.")
-    parser.add_argument("--log-level", type=lambda s: s.upper(), choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], default='INFO', help="Set logging level: DEBUG|INFO|WARNING|ERROR|CRITICAL (default: %(default)s)")
+    parser.add_argument("--log-level", type=lambda s: s.upper(),
+                        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], default='INFO',
+                        help="Set logging level: DEBUG|INFO|WARNING|ERROR|CRITICAL (default: %(default)s)")
 
     args = parser.parse_args()
 

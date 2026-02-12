@@ -170,7 +170,7 @@ class TermiusModifier:
     def restore_backup(self):
         """完整还原操作"""
         if not os.path.exists(self._backup_path):
-            logging.info("Backup file not found, skip backup restore.")
+            logging.info("未找到备份文件，跳过恢复备份|Backup file not found, skip backup restore.")
             return
 
         shutil.copy(self._backup_path, self._original_path)
@@ -180,7 +180,7 @@ class TermiusModifier:
         """智能备份管理（仅在缺失时创建）"""
         if not os.path.exists(self._backup_path):
             shutil.copy(self._original_path, self._backup_path)
-            logging.info("Created initial backup.")
+            logging.info("创建初始备份|Created initial backup.")
 
     def manage_workspace(self):
         # 备份

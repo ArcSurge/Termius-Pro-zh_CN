@@ -8,12 +8,17 @@ import shutil
 import stat
 import subprocess
 import sys
+import tempfile
 import time
 import tkinter as tk
 from tkinter import filedialog
 
 
 class TermiusModifier:
+    @property
+    def _script_dir(self):
+        return os.path.dirname(os.path.abspath(__file__))
+
     @property
     def _backup_path(self):
         """备份文件路径"""
@@ -31,26 +36,31 @@ class TermiusModifier:
     @property
     def _unpack_dir(self):
         """解包文件输出目录（脚本同级目录/extract）"""
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        return os.path.join(script_dir, "extract", "app.asar.unpack")
+        return os.path.join(self._script_dir, "extract", "app.asar.unpack")
 
     @property
     def _rules_dir(self):
         """规则文件目录"""
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        return os.path.join(script_dir, "rules")
+        return os.path.join(self._script_dir, "rules")
 
     def __init__(self, termius_path, args):
         """初始化修改器实例"""
         self.termius_path = termius_path
         self.args = args
-        self.files_cache = {}
         self.loaded_rules = []
+        self.compiled_rules = []
         self.applied_rules = set()
+
+    def apply_macos_fix(self):
+        logging.info("Applying macOS fix...")
+        script_path = os.path.join(self._script_dir, "macos", "osxfix.sh")
+        run_command(["chmod", "+x", script_path])
+        # 以 list 形式执行脚本（脚本已赋可执行权限）
+        run_command([script_path])
+        logging.info("MacOS fix applied.")
 
     def load_rules(self):
         """动态加载与参数同名的规则文件"""
-        script_dir = os.path.dirname(os.path.abspath(__file__))
         # 定义需要处理的参数列表
         rule_args = ["skip_login", "trial", "style", "localize"]
 
@@ -60,12 +70,28 @@ class TermiusModifier:
             # 自动生成文件名, 强制保持参数名与文件名一致
             file_name = f"{arg}.txt"
             try:
-                file_path = os.path.join(script_dir, "rules", file_name)
+                file_path = os.path.join(self._rules_dir, file_name)
                 if content := read_file(file_path):
                     self.loaded_rules.extend(content)
             except Exception as e:
                 logging.error(f"Error loading {file_name}: {e}")
                 sys.exit(1)
+
+        self.compiled_rules = []
+        for line in self.loaded_rules:
+            if is_comment_line(line):
+                self.compiled_rules.append(("comment", line, None, None))
+                continue
+            try:
+                old_val, new_val = parse_replace_rule(line)
+                if is_regex_pattern(old_val):
+                    self.compiled_rules.append(("regex", line, re.compile(old_val[1:-1]), new_val))
+                else:
+                    self.compiled_rules.append(("plain", line, old_val, new_val))
+            except ValueError as e:
+                logging.error(f"Skipping invalid rule: {line} -> {str(e)}")
+            except re.error as e:
+                logging.error(f"Regex error: {line} -> {str(e)}")
 
     def decompress_asar(self):
         """解压 app.asar 文件（使用 list 调用，避免 shell/空格问题）"""
@@ -94,7 +120,7 @@ class TermiusModifier:
         """提取所有JSON和JS文件中的字符串到extract目录"""
         try:
             # 确保extract目录存在
-            extract_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "extract")
+            extract_dir = os.path.join(self._script_dir, "extract")
             os.makedirs(extract_dir, exist_ok=True)
 
             all_strings_file = os.path.join(extract_dir, "allstring.txt")
@@ -200,56 +226,45 @@ class TermiusModifier:
         if os.path.exists(self._backup_path):
             os.remove(self._backup_path)
 
-    def load_files(self):
-        """加载所有代码文件到内存"""
+    def replace_rules(self):
+        """规则替换"""
+        logging.info("开始替换汉化规则...|Starting replacement...")
         code_files = self.collect_code_files()
-        for file in code_files:
-            if os.path.exists(file):
-                self.files_cache[file] = read_file(file, strip_empty=False)
+        for file_path in code_files:
+            if not os.path.exists(file_path):
+                continue
+            try:
+                content = read_file(file_path, strip_empty=False)
+                new_content, matched_rules = self.replace_content(content)
+                self.applied_rules.update(matched_rules)
+                if new_content != content:
+                    write_file_atomic(file_path, new_content)
+            except Exception as e:
+                logging.error(f"Process file failed: {file_path} - {e}")
+        logging.info("替换与写入完成|Replacement and writing completed.")
 
     def replace_content(self, file_content):
         """执行内容替换的核心逻辑"""
         if not file_content:
-            return file_content
+            return file_content, set()
+        if not self.compiled_rules:
+            return file_content, set()
 
-        for line in self.loaded_rules:
-            try:
-                if is_comment_line(line):
-                    self.applied_rules.add(line)
-                    continue
-                old_val, new_val = parse_replace_rule(line)
-                original_content = file_content
-                if is_regex_pattern(old_val):
-                    pattern = re.compile(old_val[1:-1])
-                    file_content = pattern.sub(new_val, file_content)
-                else:
-                    file_content = file_content.replace(old_val, new_val)
+        matched_rules = set()
+        for rule_type, line, old_or_pattern, new_val in self.compiled_rules:
+            if rule_type == "comment":
+                matched_rules.add(line)
+                continue
+            original_content = file_content
+            if rule_type == "regex":
+                file_content = old_or_pattern.sub(new_val, file_content)
+            else:
+                file_content = file_content.replace(old_or_pattern, new_val)
+            if original_content != file_content:
+                # 仅关注内容是否改变
+                matched_rules.add(line)
 
-                if original_content != file_content:
-                    # 仅关注内容是否改变
-                    self.applied_rules.add(line)
-
-            except ValueError as e:
-                logging.error(f"Skipping invalid rule: {line} → {str(e)}")
-            except re.error as e:
-                logging.error(f"Regex error: {line} → {str(e)}")
-
-        return file_content
-
-    def replace_rules(self):
-        """规则替换"""
-        logging.info("开始替换汉化规则...|Starting replacement...")
-        for file_path in self.files_cache:
-            self.files_cache[file_path] = self.replace_content(self.files_cache[file_path])
-        logging.info("替换完成|Replacement completed.")
-
-    def write_files(self):
-        """将修改后的内容写入文件"""
-        logging.info("开始写入...|Starting writing...")
-        for file_path, content in self.files_cache.items():
-            with open(file_path, "w", encoding="utf-8") as file:
-                file.write(content)
-        logging.info("写入完成|Writing completed.")
+        return file_content, matched_rules
 
     def collect_code_files(self):
         """获取所有代码文件路径"""
@@ -259,12 +274,10 @@ class TermiusModifier:
             os.path.join(self._app_dir, "main-process"),
         ]
         code_files = []
+        extensions = (".js", ".css") if self.args.style else (".js",)
         for prefix in prefix_links:
             for root, _, files in os.walk(prefix):
-                if self.args.style:
-                    code_files.extend([os.path.join(root, f) for f in files if f.endswith((".js", ".css"))])
-                else:
-                    code_files.extend([os.path.join(root, f) for f in files if f.endswith(".js")])
+                code_files.extend([os.path.join(root, f) for f in files if f.endswith(extensions)])
         return code_files
 
     def apply_changes(self):
@@ -273,11 +286,10 @@ class TermiusModifier:
         self.manage_workspace()
         self.decompress_asar()
         self.load_rules()
-        self.load_files()
         self.replace_rules()
-        self.write_files()
         self.pack_to_asar()
-        apply_macos_fix()
+        if is_macos():
+            self.apply_macos_fix()
         elapsed = time.monotonic() - start_time
         logging.info(f"汉化在 {elapsed:.2f} 秒内完成|Replacement done in {elapsed:.2f} seconds.")
 
@@ -307,7 +319,11 @@ class TermiusModifier:
 
         found_files = []
         for file_path in code_files:
-            file_content = read_file(file_path, strip_empty=False)
+            try:
+                file_content = read_file(file_path, strip_empty=False)
+            except Exception as e:
+                logging.warning(f"Skip unreadable file: {file_path} - {e}")
+                continue
             if file_content and all(term in file_content for term in find_terms):
                 found_files.append(file_path)
 
@@ -355,12 +371,14 @@ class TermiusModifier:
         elapsed = time.monotonic() - start_time
         logging.info(f"解包和字符串提取在 {elapsed:.2f} 秒内完成|Unpack and string extraction done in {elapsed:.2f} seconds.")
 
+
 def get_asar_cmd():
     """
     Windows 下使用 asar.cmd
     macOS / Linux 使用 asar
     """
     return "asar.cmd" if is_windows() else "asar"
+
 
 def run_command(cmd, shell=False):
     """执行系统命令"""
@@ -400,8 +418,24 @@ def read_file(file_path, strip_empty=True):
         with open(file_path, "r", encoding="utf-8") as file:
             return [line.rstrip("\r\n") for line in file if line.strip()] if strip_empty else file.read()
     except Exception as e:
-        logging.error(f"Read error: {file_path} - {e}")
-        sys.exit(1)
+        raise RuntimeError(f"Read error: {file_path} - {e}") from e
+
+
+def write_file_atomic(file_path, content):
+    """原子写入文件，避免中断导致目标文件损坏"""
+    file_dir = os.path.dirname(file_path) or "."
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=file_dir, delete=False) as temp_file:
+            temp_file.write(content)
+            temp_path = temp_file.name
+        os.replace(temp_path, file_path)
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+            except OSError:
+                pass
 
 
 def is_comment_line(line):
@@ -454,17 +488,9 @@ def select_directory(title):
 def is_macos():
     return platform.system() == 'Darwin'
 
+
 def is_windows():
     return platform.system() == 'Windows'
-
-def apply_macos_fix():
-    if is_macos():
-        logging.info("Applying macOS fix...")
-        script_path = "./macos/osxfix.sh"
-        run_command(["chmod", "+x", script_path])
-        # 以 list 形式执行脚本（脚本已赋可执行权限）
-        run_command([script_path])
-        logging.info("MacOS fix applied.")
 
 
 def get_termius_path():

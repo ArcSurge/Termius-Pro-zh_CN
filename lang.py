@@ -158,7 +158,7 @@ class TermiusModifier:
             # 过滤和排序字符串
             filtered_strings = sorted([
                 s for s in all_strings
-                if len(s) > 1 and not s.isspace() and not re.match(r'^[0-9\.\+\-]*$', s)
+                if len(s) > 1 and not s.isspace() and not re.match(r'^[0-9.+\-]*$', s)
             ], key=lambda x: (len(x), x.lower()))
 
             # 写入文件
@@ -313,9 +313,10 @@ class TermiusModifier:
             return
 
         # 原有的搜索功能
-        code_files = self.collect_code_files()
         if not os.path.exists(self._app_dir):
             self.decompress_asar()
+
+        code_files = self.collect_code_files()
 
         found_files = []
         for file_path in code_files:

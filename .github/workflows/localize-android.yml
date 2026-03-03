@@ -42,8 +42,10 @@ jobs:
           cd android
           # 优先检查SIGNING_KEY机密是否存在
           if [ -n "${{ secrets.SIGNING_KEY }}" ]; then
+            # 确保 keystore 文件夹存在
+            mkdir -p keystore
             echo "Decoding base64 signing key..."
-            base64 -d <<< "${{ secrets.SIGNING_KEY }}" > Termius_zh.jks
+            base64 -d <<< "${{ secrets.SIGNING_KEY }}" > keystore/Termius_zh.jks
           fi
             echo "${{ secrets.APK_SIGN_PROPERTIES }}" > apk.sign.properties
 

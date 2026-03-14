@@ -12,25 +12,57 @@ jobs:
       run_on: windows-2025  # x86
       platform: windows
       version_command: |
-        if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
-          Write-Host "::error::winget not found."
-          exit 1
-        }
-        winget --version
-        winget upgrade winget --accept-package-agreements --accept-source-agreements --disable-interactivity
-        winget --version
-        $WINGET_ID = "Termius.Termius"
-        winget search --exact --id $WINGET_ID
-        $termius_version = winget search --exact --id $WINGET_ID | Select-String -Pattern "$WINGET_ID\s+([0-9]+\.[0-9]+\.[0-9]+)" | ForEach-Object {
-          if ($_ -match "$WINGET_ID\s+([0-9]+\.[0-9]+\.[0-9]+)") { $matches[1] }
+        function Compare-Versions {
+          param([string]$v1, [string]$v2)
+          if (-not $v1) { return $v2 }
+          if (-not $v2) { return $v1 }
+          $v1Parts = $v1.Split('.') | ForEach-Object { [int]$_ }
+          $v2Parts = $v2.Split('.') | ForEach-Object { [int]$_ }
+          for ($i = 0; $i -lt [Math]::Max($v1Parts.Count, $v2Parts.Count); $i++) {
+            $part1 = if ($i -lt $v1Parts.Count) { $v1Parts[$i] } else { 0 }
+            $part2 = if ($i -lt $v2Parts.Count) { $v2Parts[$i] } else { 0 }
+            if ($part1 -gt $part2) { return $v1 }
+            if ($part2 -gt $part1) { return $v2 }
+          }
+          return $v1
         }
 
-        if ($termius_version) {
-          Write-Host "Extracted Termius version: $termius_version"
-          Add-Content -Path $env:GITHUB_ENV -Value "TERMIUS_VERSION=$termius_version"
-        } else {
-          Write-Host "::error::Failed to extract version from Termius package"
+        $wingetVersion = $null
+        if (Get-Command winget -ErrorAction SilentlyContinue) {
+          winget upgrade winget --accept-package-agreements --accept-source-agreements --disable-interactivity | Out-Null
+          $wingetVersion = (winget search --exact --id "Termius.Termius" | Select-String -Pattern "Termius\.Termius\s+([0-9]+\.[0-9]+\.[0-9]+)" | ForEach-Object { if ($_.Matches.Count -gt 0) { $_.Matches[0].Groups[1].Value } }) -join ""
+          Write-Host "winget version: $($wingetVersion ?? 'not found')"
+        }
+
+        $chocoVersion = $null
+        if (Get-Command choco -ErrorAction SilentlyContinue) {
+          $chocoVersion = (choco search termius --exact | Select-String -Pattern "termius\s+([0-9]+\.[0-9]+\.[0-9]+)" | ForEach-Object { if ($_.Matches.Count -gt 0) { $_.Matches[0].Groups[1].Value } }) -join ""
+          Write-Host "choco version: $($chocoVersion ?? 'not found')"
+        }
+
+        $termius_version = Compare-Versions -v1 $wingetVersion -v2 $chocoVersion
+        if (-not $termius_version) {
+          Write-Host "::error::Failed to get Termius version"
           exit 1
         }
-      install_command: winget install -e --id Termius.Termius --silent
+
+        Add-Content -Path $env:GITHUB_ENV -Value "TERMIUS_VERSION=$termius_version"
+        if ($wingetVersion -eq $termius_version) {
+          Add-Content -Path $env:GITHUB_ENV -Value "PACKAGE_MANAGER=winget"
+        } elseif ($chocoVersion -eq $termius_version) {
+          Add-Content -Path $env:GITHUB_ENV -Value "PACKAGE_MANAGER=choco"
+        } else {
+          Write-Host "::error::PACKAGE_MANAGER not set, cannot determine installation method"
+          exit 1
+        }
+      install_command: |
+        Write-Host "Package Manager: $env:PACKAGE_MANAGER"
+        if ($env:PACKAGE_MANAGER -eq "winget") {
+          winget install -e --id Termius.Termius --silent
+        } elseif ($env:PACKAGE_MANAGER -eq "choco") {
+          choco install termius -y --no-progress
+        } else {
+          Write-Host "::error::PACKAGE_MANAGER not set, cannot determine installation method"
+          exit 1
+        }
       source_path: $HOME/AppData/Local/Programs/Termius/resources/app.asar

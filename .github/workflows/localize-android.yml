@@ -23,8 +23,8 @@ jobs:
           cd android
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          sudo apt install -y zipalign
-          sudo apt install -y apksigner
+          sudo apt-get install -y zipalign
+          sudo apt-get install -y apksigner
 
       - name: Get Version
         id: version

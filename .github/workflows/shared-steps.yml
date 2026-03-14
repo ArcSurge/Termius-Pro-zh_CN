@@ -31,10 +31,10 @@ jobs:
 
     steps:
       - name: Checkout source code from repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Configure Python runtime environment
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
@@ -109,7 +109,7 @@ jobs:
         run: |
           set -e
           echo "Installing asar..."
-          npm install -g asar || { echo "::error::Failed to install asar"; exit 1; }
+          npm install -g @electron/asar || { echo "::error::Failed to install asar"; exit 1; }
 
       - name: Generate localization assets
         if: steps.compare_versions.outputs.should_continue == 'true'

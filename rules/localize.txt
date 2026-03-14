@@ -33,10 +33,6 @@ title:"Quick connect"|title:"快速连接"
 "No vaults selected"|"未选择保管库"
 "Contact your team admin to request access."|"请与你的团队管理员联系以请求访问权限。"
 "Please select at least one vault in the vault picker."|"请在保管库选择器中至少选择一个保管库。"
-"Re-enter your "|"重新输入你的"
-"To enable this feature, please enter your Termius"|"要启用这个特性, 请输入你的 Termius"
-"To enable access to the shared data, please enter your Termius"|"要打开这个分享数据的访问, 请输入你的 Termius"
-"You can also do it later in settings."|"你也可以稍后在设置中执行此操作。"
 
 {LOCAL:"Local",REMOTE:"Remote",DYNAMIC:"Dynamic"}|{LOCAL:"本地",REMOTE:"远程",DYNAMIC:"动态"}
 ["grid","list"]|[{text:"表格",label:"grid"},{text:"列表",label:"list"}]
@@ -44,8 +40,6 @@ title:"Quick connect"|title:"快速连接"
 
 children:"Font"|children:"字体"
 children:"Themes"|children:"主题"
-"Enable Shared Groups"|"启用分享组"
-"Enable Access to Shared Groups"|"启用分享组访问"
 "Log out"|"退出登录"
 "Delete account"|"删除账号"
 "Change "|"修改"
@@ -67,7 +61,6 @@ label:"Flow Control"|label:"流控制"
 label:"Parity"|label:"对等"
 label:"New Local Terminal"|label:"新建本地终端"
 label:"New Serial Connection"|label:"新建串行连接"
-"Now the team administrator can share groups with your team to make sure your team is up-to-date with the latest changes in the configuration."|"现在, 团队管理员可以与你的团队共享组, 以确保你的团队了解配置中的最新更改。"
 "Enter Passphrase"|"输入 Passphrase"
 "Edit Host"|"编辑主机"
 label:"Settings"|label:"设置"
@@ -245,12 +238,12 @@ description:"Choose SSH.id passkey"|description:"选择 SSH.id 密钥"
 "Hide Hidden Files":"Show Hidden Files"|"隐藏隐藏文件":"显示隐藏文件"
 "Connection failed with connection log:"|"连接失败, 并显示连接日志:"
 "The update will be downloaded automatically."|"将会自动下载更新。"
-`Version ${this.options.version} is the latest version.`|`版本 ${this.options.version} 是最新版本。`
+/`Version \${([\w$]+?)\.app\.getVersion\(\)} is the latest version\.`/|`版本 ${\g<1>.app.getVersion()} 是最新版本。`
 "Data has not been synchronized yet"|"数据未同步"
+"Re-sync your data"|"重新同步你的数据"
 "Delete local data and start over"|"删除本地数据并重新开始"
 "Allow local SSH/SFTP connections"|"允许本地 SSH/SFTP 连接"
 "Need to import something else?"|"需要导入其他内容吗?"
-"Delete local data and re-sync"|"删除本地数据并重新同步"
 "Are you sure you want to delete tag?"|"你确定要删除标记吗?"
 "A new update is ready to install"|"一个更新已经准备就绪"
 "Something went wrong, try again."|"发生错误, 请稍后再试"
@@ -736,8 +729,8 @@ plural:"these hosts"|plural:"这些主机"
 "Host Details"|"主机详细信息"
 "No file type associations yet"|"还没有文件类型关联"
 "Apps you choose using the “Open with…” option to open files via SFTP will appear here."|"你选择使用“用…打开”选项选择的应用程序将通过 SFTP 打开文件。"
-/"Start by connecting to a saved host ",(\w+?)\("wbr",{}\),"to manage your files with SFTP\."/|"首先连接到已保存的主机",\g<1>("wbr",{}),"以使用 SFTP 管理文件。"
-/"Save your connection details as hosts ",(\w+?)\("wbr",{}\),"to connect via SFTP\."/|"将你的连接详细信息保存为主机",\g<1>("wbr",{}),"以使用 SFTP 管理文件。"
+/"Start by connecting to a saved host ",(\w+?)\("br",{}\),"to manage your files with SFTP\."/|"首先连接到已保存的主机",\g<1>("wbr",{}),"以使用 SFTP 管理文件。"
+/"Save your connection details as hosts ",(\w+?)\("br",{}\),"to connect via SFTP\."/|"将你的连接详细信息保存为主机",\g<1>("wbr",{}),"以使用 SFTP 管理文件。"
 endAdornment:"arrows"|endAdornment:"方向键"
 "Switch to specific Tab |"切换到指定的标签页
 "Termius for Teams"|"Termius 团队版"
@@ -1142,8 +1135,6 @@ label:"Restore"|label:"恢复"
 "For extra security, we sent you a verification email to"|"为了提高安全性，我们向你发送了一封验证电子邮件"
 "I have verified this device"|"我已经验证了这个设备"
 "Didn't get email?"|"没有收到电子邮件?"
-"Contact us"|"联系我们"
-"Now you can share groups with your team to make sure your team is up-to-date with the latest changes in the configuration."|"现在，你可以与你的团队共享组，以确保你的团队掌握最新的配置更改。"
 "Your team has been configured!"|"你的团队已配置!"
 
 children:"Waiting for data access"|children:"正在等待数据访问"
@@ -1470,3 +1461,20 @@ description:`Connect to your servers in one click, use AI-powered autocomplete,|
 sync your data across mobile and desktop`|跨移动设备和桌面同步你的数据`
 "Enable Advanced Settings"|"启用高级设置"
 children:"Interactive"|children:"交互式"
+"Something went wrong"|"出了点问题"
+/title:`Reset \${([\w$]+?)}`/|title:`重置${\g<1>}`
+title:"Success"|title:"成功"
+/title:`\${([\w$]+?)\(([\w$]+?)\)} reset failed`/|title:`${\g<1>(\g<2>)}重置失败`
+/text:`\${([\w$]+?)\(([\w$]+?)\)} reset failed with status \${([\w$]+?)\.status}`/|text:`${\g<1>(\g<2>)}重置失败，状态码为 ${\g<3>.status}`
+/children:\["Forgot ",([\w$]+?),"\?"]/|children:["忘记",\g<1>,"?"]
+
+"The decryption key is missing from the system keychain, so your local data can’t be decrypted."|"系统密钥链中缺少解密密钥，因此你的本地数据无法解密。"
+/\["Decryption key not found,",([\w$]+?)\("br",{}\)," your data can’t be accessed"\]/|["找不到解密密钥，",\g<1>,"无法访问你的数据"]
+" to re-sync your data"|"以重新同步你的数据"
+"Email with password reset instructions will be sent to"|"包含密码重置说明的电子邮件将发送至"
+"Get instructions"|"获取说明"
+/\[([\w$]+?)\(([\w$]+?),{color:"accent",onClick:([\w$]+?),children:"Contact us"}\)," ","if you have any questions\."\]/|["如有任何疑问，",\g<1>(\g<2>,{color:"accent",onClick:\g<3>,children:"请联系我们。"})]
+"If you recently changed the default keychain, try transferring the Termius key from the old keychain to the new one"|"如果你最近更改了默认密钥链，可以尝试将 Termius 密钥从旧密钥链转移到新密钥链"
+"Don’t remove Termius keys from the system keychain"|"不要从系统密钥链中删除 Termius 密钥"
+"To help prevent this from happening again:"|"为了防止这种情况再次发生:"
+"Contact us"|"联系我们"

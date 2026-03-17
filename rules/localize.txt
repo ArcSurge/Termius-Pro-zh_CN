@@ -1478,3 +1478,27 @@ title:"Success"|title:"成功"
 "Don’t remove Termius keys from the system keychain"|"不要从系统密钥链中删除 Termius 密钥"
 "To help prevent this from happening again:"|"为了防止这种情况再次发生:"
 "Contact us"|"联系我们"
+/children:\[([\w$]+?)\(([\w$]+?),{className:([\w$]+?)\.icon}\),"Exported"\]/|children:[\g<1>(\g<2>,{className:\g<2>.icon}),"已导出"]
+info:"Legacy devices"|info:"传统设备"
+info:"Supported only on ML-DSA-enabled servers"|info:"仅支持 ML-DSA 的服务器"
+label:"Parameter set"|label:"参数设置"
+"Use Touch ID to unlock the key"|"使用 Touch ID 解锁密钥"
+"Use Windows Hello to unlock the key"|"使用 Windows Hello 解锁密钥"
+"Credential ID must be provided for Windows Hello sign request."|"必须为 Windows Hello 签名请求提供凭证 ID。"
+title:"Insert FIDO2 device"|title:"插入 FIDO2 设备"
+text:"No SSH keys found on the selected FIDO2 device"|text:"在选定的 FIDO2 设备上找不到 SSH 密钥"
+text:"Set PIN code on your FIDO2 device to show here."|text:"在 FIDO2 设备上设置 PIN 码以在此处显示。"
+"An internal error occurred."|"发生内部错误。"
+["PIN invalid","The entered pin code is incorrect."]|["PIN 码无效","输入的 PIN 码不正确。"]
+["Authentication blocked","The device was blocked. Please re-connect it to reset block."]|["身份验证被阻止","设备被阻止，请重新连接以重置阻止。"]
+["PIN is not set","The pin code must be set before proceeding."]|["PIN 码未设置","必须先设置 PIN 码，然后才能继续。"]
+["Timeout is over","Timeout reached. Please try again."]|["超时已结束","已超时，请重试。"]
+["Key store is full","The limit of resident keys is reached on the device."]|["密钥存储已满","设备上已达到常驻密钥的限制。"]
+["Device not found","The device was disconnected. Please connect the device to retry."]|["未找到设备","设备已断开连接，请连接设备重试。"]
+["Communication with device is interrupted","Cannot receive data from the device. Please re-connect the device to retry."]|["与设备的通信中断","无法从设备接收数据，请重新连接设备重试。"]
+["PIN required",internalError]|["需要 PIN 码",internalError]
+["An internal error occurred",internalError]|["发生内部错误",internalError]
+["Unsupported option",internalError]|["不支持的选项",internalError]
+["Unsupported command",internalError]|["不支持的命令",internalError]
+"Generating the key..."|"正在生成密钥..."
+/children:\[" ","for the ",([\w$]+?)\(Typography,{bold:!0,children:([\w$]+?)}\)," connection"\]/|children:[" ","用于 ",\g<1>(Typography,{bold:!0,children:\g<2>})," 连接"]

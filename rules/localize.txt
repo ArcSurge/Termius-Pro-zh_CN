@@ -460,6 +460,8 @@ no_credentials_sharing:"No credentials",credentials_sharing:"Credentials"|no_cre
 title:"Tags"|title:"标记"
 "Save targets"|"保存目标"
 "Select targets"|"选择目标"
+default:"All Suggestions"|default:"所有建议"
+"Jump to":"Join"|"跳转到":"加入"
 "Jump To"|"跳转到"
 "Jump to"|"跳转到"
 "New tab"|"新标签"
@@ -557,6 +559,8 @@ password:"Password"|password:"密码"
 `Search terminal|`搜索终端
 "Quick Connect in a new window"|"在新窗口中快速连接"
 "Quick Connect"|"快速连接"
+label:"Token"|label:"令牌"
+"Tenant ID"|"租户 ID"
 "Client ID"|"客户端 ID"
 "Client Secret"|"客户端秘钥"
 "Convert to Host"|"转换为主机"
@@ -955,6 +959,7 @@ children:"Broadcast"|children:"广播"
 title:"Broadcast input"|title:"广播输入"
 "Run in all tabs"|"在所有标签页中运行"
 "View more"|"查看更多"
+hotkey:"Click"|hotkey:"单击"
 
 "Invalid Configuration: Missing Region"|"配置无效: 缺少区域"
 
@@ -969,6 +974,25 @@ children:["Reconnect"|children:["重新连接"
 "Drop files here"|"将文件拖放到此处"
 title:"Error"|title:"错误"
 "No such file"|"没有此文件"
+[1,"End of file"]|[1,"文件结束"]
+[3,"Permission denied"]|[3,"权限被拒绝"]
+[4,"Failure"]|[4,"失败"]
+[5,"Bad message"]|[5,"错误消息"]
+[6,"No connection"]|[6,"无连接"]
+[7,"Connection lost"]|[7,"连接丢失"]
+[8,"Operation unsupported"]|[8,"不支持的操作"]
+[9,"Invalid handle"]|[9,"无效句柄"]
+[10,"No such path"]|[10,"无此路径"]
+[12,"Write protect"]|[12,"写保护"]
+[13,"No media"]|[13,"无介质"]
+[14,"No space on file system"]|[14,"文件系统上没有空间"]
+[15,"Quota exceeded"]|[15,"超出范围"]
+[16,"Unknown principal"]|[16,"未知主体"]
+[17,"Lock conflict"]|[17,"锁冲突"]
+[18,"Directory is not empty"]|[18,"目录不为空"]
+[19,"Not a directory"]|[19,"不是目录"]
+[20,"Invalid filename"]|[20,"无效的文件名"]
+[21,"Link loop"]|[21,"链接循环"]
 "Confirm"|"确认"
 name:"Reconnect"|name:"重新连接"
 children:"Reconnect"|children:"重新连接"
@@ -985,6 +1009,7 @@ children:"Reconnect"|children:"重新连接"
 "Decrease terminal font size"|"减小终端字体大小"
 "Reset terminal font size to default"|"将终端字体大小重置为默认值"
 
+message:"loading"|message:"加载中"
 "Enabling autocomplete..."|"正在启用自动补全..."
 "Couldn't activate autocomplete"|"无法激活自动补全"
 "Something went wrong. Try again."|"出错了，请重试。"
@@ -1056,7 +1081,7 @@ children:"Security"|children:"安全"
 "Supports Google Authenticator, Microsoft Authenticator, Duo, etc."|"支持 Google Authenticator、Microsoft Authenticator、Duo 等。"
 "Your phone number is required to use Authy"|"使用 Authy 需要你的电话号码"
 "Install Authy"|"安装 Authy"
-"Please make sure you have Authy app installed and activated."|"请确保你已安装并激活Authy应用程序。"
+"Please make sure you have Authy app installed and activated."|"请确保你已安装并激活 Authy 应用程序。"
 "I have installed Authy"|"我已经安装了 Authy"
 "View instructions"|"查看说明"
 "New Window"|"新窗口"
@@ -1502,3 +1527,23 @@ text:"Set PIN code on your FIDO2 device to show here."|text:"在 FIDO2 设备上
 ["Unsupported command",internalError]|["不支持的命令",internalError]
 "Generating the key..."|"正在生成密钥..."
 /children:\[" ","for the ",([\w$]+?)\(Typography,{bold:!0,children:([\w$]+?)}\)," connection"\]/|children:[" ","用于 ",\g<1>(Typography,{bold:!0,children:\g<2>})," 连接"]
+children:"Live"|children:"实时"
+/`\${(\w+?)} \${\w+?\("participant",\w+?\)}`/|`${\g<1>} 位参与者`
+message:"Latest update is already downloaded."|message:"已下载最新更新。"
+title:"Update Ready"|title:"更新准备就绪"
+detail:"The update will be applied after restart."|detail:"更新将在重启后应用。"
+message:"There was an error checking for updates."|message:"检查更新时出错。"
+title:"Update Error"|title:"更新错误"
+message:"Not enough disk space to download the update."|message:"没有足够的磁盘空间来下载更新。"
+title:"Insufficient Disk Space"|title:"磁盘空间不足"
+detail:"Please free up some disk space and try again"|detail:"请释放一些磁盘空间然后再试一次"
+message:"Update is already downloading."|message:"更新已在下载中。"
+title:"Update In Progress"|title:"更新进行中"
+detail:"Notification will be sent when ready."|detail:"准备就绪后将发送通知。"
+message:"Unable to check for updates."|message:"无法检查更新。"
+title:"Configuration Error"|title:"配置错误"
+detail:"There was a problem configuring the update service."|detail:"配置更新服务时出现问题。"
+message:"Update is no longer available."|message:"更新不再可用。"
+title:"Update Revoked"|title:"更新已撤销"
+detail:"Please try again later."|detail:"请稍后重试。"
+/children:\["second",([\w$]+?)>1\?"s":""\]/|children:["秒"]

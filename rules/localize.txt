@@ -796,6 +796,7 @@ case"fido":return"FIDO2 Key"|case"fido":return"FIDO2 密钥"
 children:["Invite"|children:["邀请"
 children:"only"|children:"仅选择"
 "Confirm account deletion"|"确认删除账号"
+"Username has been changed successfully"|"用户名已成功更改"
 "Deleting an account will remove all of the data associated with this account. You will have 30 days to contact us in case you need to reverse this process."|"删除账号将删除与此账号关联的所有数据。如果需要撤消此过程，你将有 30 天的时间与我们联系。"
 "Unknown error"|"未知错误"
 "Confirm logout"|"确认退出"
@@ -915,6 +916,9 @@ singular:"identity",plural:"identities"|singular:"身份",plural:"身份"
 /`From \${([\w$]+)\.host_label}:\${([\w$]+)\.local_port}`/|`从 ${\g<1>.host_label}:${\g<2>.local_port}`
 /`\${([\w$]+)} to \${([\w$]+)\.hostname}:\${([\w$]+)\.remote_port}`/|`${\g<1>} 到 ${\g<2>.hostname}:${\g<3>.remote_port}`
 
+/`Local:\${([\w$]+)\.local_port} → \${([\w$]+)\.host_label} → \${([\w$]+)\.hostname}:\${([\w$]+)\.remote_port}`/|`本地:${\g<1>.local_port} → ${\g<2>.host_label} → ${\g<3>.hostname}:${\g<4>.remote_port}`
+/`Port \${([\w$]+)\.local_port} on \${([\w$]+)\.host_label} → This device → \${([\w$]+)\.hostname}:\${([\w$]+)\.remote_port}`/|`${\g<2>.host_label} 的 ${\g<1>.local_port} 端口 → 此设备 → ${\g<3>.hostname}:${\g<4>.remote_port}`
+/`SOCKS proxy on local port \${([\w$]+)\.local_port} through \${([\w$]+)\.host_label}`/|`本地端口 ${\g<1>.local_port} 到 ${\g<2>.host_label} 上的 SOCKS 代理`
 "Add credentials"|"添加凭证"
 "start typing..."|"开始键入..."
 "activate autocomplete for this session"|"激活此会话的自动补全功能"
@@ -1267,7 +1271,6 @@ label:"Team"|label:"团队"
 "Context Multiselect Snippets"|"上下文多选片段"
 teamTrialPlan:"Team"|teamTrialPlan:"团队"
 name:"Team"|name:"团队"
-`From ${this.host.displayLabel}:${this.local_port}`|`从 ${this.host.displayLabel}:${this.local_port}`
 "Link copied"|"链接已复制"
 "Welcome back to Termius"|"欢迎回到 Termius"
 "Don’t have an account yet?"|"还没有帐户吗?"

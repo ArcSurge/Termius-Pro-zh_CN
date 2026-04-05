@@ -913,9 +913,6 @@ singular:"identity",plural:"identities"|singular:"身份",plural:"身份"
 /`\${(?P<t>\w+?)\.snippets_count} snippet\${(?P=t)\.snippets_count!==1\?"s":""}`/|`${\g<t>.snippets_count} 个代码片段`
 /`\${([\w$]+)\.snippets_count([^0]+)0} \${[\w$]+\?"snippets":"snippet"}`/|`${\g<1>.snippets_count\g<2>0} 个代码片段`
 
-/`From \${([\w$]+)\.host_label}:\${([\w$]+)\.local_port}`/|`从 ${\g<1>.host_label}:${\g<2>.local_port}`
-/`\${([\w$]+)} to \${([\w$]+)\.hostname}:\${([\w$]+)\.remote_port}`/|`${\g<1>} 到 ${\g<2>.hostname}:${\g<3>.remote_port}`
-
 /`Local:\${([\w$]+)\.local_port} → \${([\w$]+)\.host_label} → \${([\w$]+)\.hostname}:\${([\w$]+)\.remote_port}`/|`本地:${\g<1>.local_port} → ${\g<2>.host_label} → ${\g<3>.hostname}:${\g<4>.remote_port}`
 /`Port \${([\w$]+)\.local_port} on \${([\w$]+)\.host_label} → This device → \${([\w$]+)\.hostname}:\${([\w$]+)\.remote_port}`/|`${\g<2>.host_label} 的 ${\g<1>.local_port} 端口 → 此设备 → ${\g<3>.hostname}:${\g<4>.remote_port}`
 /`SOCKS proxy on local port \${([\w$]+)\.local_port} through \${([\w$]+)\.host_label}`/|`本地端口 ${\g<1>.local_port} 到 ${\g<2>.host_label} 上的 SOCKS 代理`
@@ -1550,3 +1547,7 @@ message:"Update is no longer available."|message:"更新不再可用。"
 title:"Update Revoked"|title:"更新已撤销"
 detail:"Please try again later."|detail:"请稍后重试。"
 /children:\["second",([\w$]+?)>1\?"s":""\]/|children:["秒"]
+`Save your connection details as hosts |`将你的连接详细信息另存为主机，
+to connect in one click.`|以便一键连接。`
+"Save your connection details as hosts "|"将你的连接详细信息另存为主机，"
+" to connect in one click."|"以便一键连接。"

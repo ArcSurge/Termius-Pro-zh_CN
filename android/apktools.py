@@ -551,12 +551,13 @@ class TermiusAPKModifier:
             build_apk_file
         ], log=False)
 
-        os.remove(build_apk_file)
-        shutil.move(str(build_apk_signed_file), str(build_apk_file))
         logger.info('APK signing completed')
         logger.info('Verifying APK signature')
-        run_command([get_apksigner_shell(), 'verify', '--verbose', build_apk_file])
+        run_command([get_apksigner_shell(), 'verify', '--verbose', build_apk_signed_file])
         logger.info('APK signature verification completed')
+
+        os.remove(build_apk_file)
+        shutil.move(str(build_apk_signed_file), str(build_apk_file))
 
     def _apkm_to_apk(self, apkm_file, apk_file):
         """Convert APKM to APK"""

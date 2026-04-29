@@ -7,6 +7,9 @@
 /,\.\.\.[\w$]+\([\w$]+,\[{name:[\w$]+!=null&&[\w$]+\.isMultiplayer\?[\w$]+:"Start multiplayer",onClick:\(\)=>{[\w$]+\({actionName:"share"}\)},icon:[^\]]+}\]\),/|,
 ==="vault-tab"|==="index-tab"
 /\[(?P<n>\w+?)\.ENABLE_SYNC,(?P=n)\.ENABLE_SHARING,(?P=n)\.ENABLE_RETENTION,(?P<t>\w+?)\.ENABLE_SYNC_OVER_SIZE_LIMIT,(?P=t)\.UNAUTHORIZED_SETUP_VAULT,(?P=t)\.UNAUTHORIZED_OVER_SIZE_LIMIT\]/|[]
+/;if\((\w+?)==="inactive"\)return (\w+?)\((\w+?),{onClick:(\w+?)\.onActivateSharing,className:(\w+?)\((\w+?)\.vars,(\w+?),(\w+?)\.className,(\w+?)\.inactiveStateIcon\)}\);/|;
+/(,?){visible:!this\.props\.isTeam,name:"Collaborate",handler:\(\)=>this\.onShare\w+?\(\S+?\),icon:\w+?\(\S+?\)},/|\g<1>
+/(\w+?)=(\w+?)=>{const{classes:\w+?}=(?P<p>\w+?)\(\);return \w+?\(\w+?,{className:\w+?\.shareButtonWrapper,children:\w+?\(\w+?,{color:"accent",onClick:\w+?\.onClick,disabled:\w+?\.disabled,rightIcon:\w+?\(\w+?,{}\),variant:"text",fullWidth:!0,children:\["Share this ",\w+?\.type\]}\)}\)},(?P=p)/|\g<1>=\g<2>=>{},\g<p>
 api.termius.com|localhost
 sentry.io|localhost
 split.io|localhost

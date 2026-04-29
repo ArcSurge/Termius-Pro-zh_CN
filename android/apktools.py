@@ -75,7 +75,7 @@ def get_apksigner_shell():
 
 def split_filename(abs_path):
     """Extract filename from absolute path and separate basename and extension"""
-    full_filename = os.path.basename(abs_path)
+    full_filename = os.path.basename(str(abs_path))
     base_name, ext = os.path.splitext(full_filename)
     return base_name, ext
 
@@ -611,6 +611,9 @@ class TermiusAPKModifier:
 
     def _check_required_files(self):
         """Check if required files exist"""
+        if not self.sign_properties:
+            raise Exception("Signing configuration file not found.")
+
         language_xml = os.path.join(self.working_dir, LANGUAGE_XML)
         if not os.path.exists(language_xml):
             raise Exception("Language xml not found.")
@@ -629,10 +632,6 @@ class TermiusAPKModifier:
 
     def modify_apk(self):
         """Main method to modify APK file"""
-        if not self.sign_properties:
-            logger.error("Signing configuration file not found")
-            sys.exit(1)
-
         try:
             logger.info("Starting APK file processing")
             self._check_required_files()

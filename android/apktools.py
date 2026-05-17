@@ -17,6 +17,10 @@ from requests.exceptions import ConnectionError, HTTPError, Timeout, TooManyRedi
 from pathlib import Path
 from tqdm import tqdm
 
+# Import custom logger
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from logger import setup_logging
+
 # ------------------------------ Parameters Configuration ------------------------------
 APP_FILE = "Termius"
 DIR_TMP = ".tmp_dir"
@@ -35,11 +39,7 @@ SIGNED_SUFFIX = "_signed"
 ZH_SUFFIX = "_zh"
 
 # ------------------------------ Log Configuration ------------------------------
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)-1.1s: %(message)s",
-    handlers=[logging.StreamHandler()]
-)
+setup_logging(log_level='INFO')
 logger = logging.getLogger(__name__)
 
 GLOBAL_HEADERS = {

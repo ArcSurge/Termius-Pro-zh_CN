@@ -60,8 +60,9 @@ python lang.py --extract
 | `--restore`       | `-r` | 还原操作     | `python lang.py -r`                 |
 | `--find <关键词...>` | `-f` | 多条件联合搜索  | `python lang.py -f "term1" "term2"` |
 | `--extract`       | `-e` | 提取所有可能的字符串 | `python lang.py -e`              |
+| `--verbose`       | `-v` | 设置日志级别   | `python lang.py -v DEBUG`           |
 
-## 📂 规则文件结构
+## 📂 相关文件结构
 
 ```markdown
 rules/

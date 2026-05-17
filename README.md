@@ -44,6 +44,9 @@ python lang.py --restore
 
 # 搜索特定字符串
 python lang.py --find "term1" "term2"
+
+# 提取所有字符串
+python lang.py --extract
 ```
 
 ## 🔬 参数详解
@@ -56,19 +59,19 @@ python lang.py --find "term1" "term2"
 | `--style`         | `-s` | 样式修改     | `python lang.py -ls`                |
 | `--restore`       | `-r` | 还原操作     | `python lang.py -r`                 |
 | `--find <关键词...>` | `-f` | 多条件联合搜索  | `python lang.py -f "term1" "term2"` |
-| `--find extract` | 无 | 提取所有可能的字符串 | `python lang.py --find extract` |
+| `--extract`       | `-e` | 提取所有可能的字符串 | `python lang.py -e`              |
 
 ## 📂 规则文件结构
 
 ```markdown
 rules/
-├── trial.txt      # 试用功能规则(-t/--trial时加载)
-├── localize.txt   # 汉化规则(-l/--localize时加载)
-├── skip_login.txt # 登录跳过规则(-k/--skip-login时加载)
-└── style.txt      # 样式修改规则(-s/--style时加载)
+├── trial.txt       # 试用功能规则(-t/--trial时加载)
+├── localize.txt    # 汉化规则(-l/--localize时加载)
+├── skip_login.txt  # 登录跳过规则(-k/--skip-login时加载)
+└── style.txt       # 样式修改规则(-s/--style时加载)
 extract/
-├── app.asar.unpack #解包出的所有文件
-└── allstring.txt   #所有可能的字符串
+├── app.asar.unpack # 解包出的所有文件
+└── allstring.txt   # 所有可能的字符串
 ```
 
 ## 🤷 手动汉化

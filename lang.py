@@ -310,12 +310,6 @@ class TermiusModifier:
         """文件内容搜索功能"""
         find_terms = self.args.find
 
-        # 如果参数是 "extract"，则执行解包和提取字符串功能
-        if find_terms and len(find_terms) == 1 and find_terms[0].lower() == "extract":
-            self.extract_and_unpack()
-            return
-
-        # 原有的搜索功能
         if not os.path.exists(self._app_dir):
             self.decompress_asar()
 
@@ -529,13 +523,14 @@ def get_termius_path(beta=False):
 def main():
     parser = argparse.ArgumentParser(description="Modify Termius application.")
     parser.add_argument("-b", "--beta", action="store_true", help="Specify if this is a beta version.")
-    parser.add_argument("-t", "--trial", action="store_true", help="Activate professional edition trial.")
-    parser.add_argument("-k", "--skip-login", action="store_true", help="Disable authentication workflow.")
     parser.add_argument("-l", "--localize", action="store_true",
                         help="Enable localization patch (Chinese translation/adaptation).")
+    parser.add_argument("-t", "--trial", action="store_true", help="Activate professional edition trial.")
+    parser.add_argument("-k", "--skip-login", action="store_true", help="Disable authentication workflow.")
     parser.add_argument("-s", "--style", action="store_true", help="UI/UX customization preset.")
-    parser.add_argument("-r", "--restore", action="store_true", help="Restore software to initial state.")
+    parser.add_argument("-e", "--extract", action="store_true", help="Unpack and extract application strings.")
     parser.add_argument("-f", "--find", nargs="+", help="Multi-mode search operation.")
+    parser.add_argument("-r", "--restore", action="store_true", help="Restore software to initial state.")
     parser.add_argument("--log-level", type=lambda s: s.upper(),
                         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], default='INFO',
                         help="Set logging level: DEBUG|INFO|WARNING|ERROR|CRITICAL (default: %(default)s)")
@@ -546,7 +541,7 @@ def main():
     logging.basicConfig(level=args.log_level, format="%(asctime)s - %(levelname)7s - %(message)s", force=True)
 
     # 如果没有提供参数，默认执行 `--localize`
-    if not any((args.trial, args.find, args.style, args.skip_login, args.localize, args.restore)):
+    if not any((args.trial, args.find, args.style, args.skip_login, args.localize, args.restore, args.extract)):
         args.localize = True
 
     check_asar_installed()
@@ -557,6 +552,8 @@ def main():
         modifier.apply_changes()
     elif args.find:
         modifier.find_in_content()
+    elif args.extract:
+        modifier.extract_and_unpack()
     elif args.restore:
         modifier.restore_changes()
     else:

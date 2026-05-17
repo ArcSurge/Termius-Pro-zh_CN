@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import argparse
+import fnmatch
 import logging
 import os
 import platform
@@ -12,6 +13,90 @@ import tempfile
 import time
 import tkinter as tk
 from tkinter import filedialog
+
+
+def create_ignore_filter(ignore_patterns=None, allow_patterns=None):
+    """创建文件过滤函数
+
+    Args:
+        ignore_patterns: 黑名单模式列表，'!' 开头为例外规则
+        allow_patterns: 白名单模式列表，None 表示不使用
+    
+    Note:
+        - '/' 结尾：只匹配目录 | '/' 开头：只匹配根目录 | '!' 开头：例外规则
+        - 工作流程：黑名单 → !例外 → 白名单过滤
+    """
+    if ignore_patterns is None:
+        ignore_patterns = []
+    if allow_patterns is None:
+        allow_patterns = []
+
+    ignore_list = [p for p in ignore_patterns if not p.startswith('!')]
+    allow_list = [p[1:] for p in ignore_patterns if p.startswith('!')]
+    first_call = [True]
+
+    def filter_func(directory, contents):
+        is_root, first_call[0] = first_call[0], False
+        ignore_set = set()
+
+        for item in contents:
+            full_path = os.path.join(directory, item)
+            try:
+                st = os.lstat(full_path)
+                is_file, is_dir = stat.S_ISREG(st.st_mode), stat.S_ISDIR(st.st_mode)
+            except OSError:
+                is_file, is_dir = os.path.isfile(full_path), os.path.isdir(full_path)
+
+            should_ignore = any(_match_pattern(item, p, is_dir, is_root) for p in ignore_list)
+
+            if should_ignore and allow_list:
+                should_ignore = not any(_match_pattern(item, p, is_dir, is_root) for p in allow_list)
+
+            if not should_ignore and allow_patterns and is_file:
+                should_ignore = not any(_match_pattern(item, p, is_file, is_root) for p in allow_patterns)
+
+            if should_ignore:
+                ignore_set.add(item)
+
+        return ignore_set
+
+    return filter_func
+
+
+def _match_pattern(name, pattern, is_dir, is_root=False):
+    """模式匹配（支持 .gitignore 风格）"""
+    if pattern.startswith('/') and not is_root:
+        return False
+    pattern = pattern.lstrip('/')
+
+    pattern = pattern[2:] if pattern.startswith('*/') else pattern
+
+    if pattern.endswith('/'):
+        clean_pattern = pattern[:-1]
+        has_wildcard = '*' in clean_pattern or '?' in clean_pattern
+        return is_dir and (name == clean_pattern if not has_wildcard else fnmatch.fnmatch(name, clean_pattern))
+
+    has_wildcard = '*' in pattern or '?' in pattern
+    return name == pattern if not has_wildcard else fnmatch.fnmatch(name, pattern)
+
+
+def remove_empty_dirs(directory):
+    """递归删除空目录，返回删除数量"""
+    removed_count = 0
+    for root, dirs, files in os.walk(directory, topdown=False):
+        for dir_name in dirs[:]:
+            dir_path = os.path.join(root, dir_name)
+            try:
+                with os.scandir(dir_path) as it:
+                    if not any(it):
+                        os.rmdir(dir_path)
+                        removed_count += 1
+            except OSError as e:
+                logging.error(f"Failed to remove {dir_path}: {e}")
+    
+    if removed_count > 0:
+        logging.debug(f"Removed {removed_count} empty directories")
+    return removed_count
 
 
 class TermiusModifier:
@@ -109,8 +194,10 @@ class TermiusModifier:
                 shutil.rmtree(self._unpack_dir)
                 logging.debug(f"Removed existing unpack directory: {self._unpack_dir}")
 
-            # 复制整个解包目录
-            shutil.copytree(self._app_dir, self._unpack_dir)
+            ignore_func = create_ignore_filter(["node_modules"], ["*.js", "*.json", "*.css"])
+            shutil.copytree(self._app_dir, self._unpack_dir, ignore=ignore_func)
+            remove_empty_dirs(self._unpack_dir)
+
             logging.info(f"解包文件已复制到|Unpacked files copied to: {self._unpack_dir}")
 
             # 提取所有JSON和JS文件中的字符串
@@ -277,7 +364,7 @@ class TermiusModifier:
             os.path.join(self._app_dir, "main-process"),
         ]
         code_files = []
-        extensions = (".js", ".css") if self.args.style else (".js",)
+        extensions = (".js", ".css") if self.args.style else ".js"
         for prefix in prefix_links:
             for root, _, files in os.walk(prefix):
                 code_files.extend([os.path.join(root, f) for f in files if f.endswith(extensions)])

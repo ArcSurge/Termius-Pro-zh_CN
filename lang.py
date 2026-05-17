@@ -13,6 +13,7 @@ import tempfile
 import time
 import tkinter as tk
 from tkinter import filedialog
+from logger import setup_logging
 
 
 def create_ignore_filter(ignore_patterns=None, allow_patterns=None):
@@ -21,7 +22,7 @@ def create_ignore_filter(ignore_patterns=None, allow_patterns=None):
     Args:
         ignore_patterns: 黑名单模式列表，'!' 开头为例外规则
         allow_patterns: 白名单模式列表，None 表示不使用
-    
+
     Note:
         - '/' 结尾：只匹配目录 | '/' 开头：只匹配根目录 | '!' 开头：例外规则
         - 工作流程：黑名单 → !例外 → 白名单过滤
@@ -92,8 +93,8 @@ def remove_empty_dirs(directory):
                         os.rmdir(dir_path)
                         removed_count += 1
             except OSError as e:
-                logging.error(f"Failed to remove {dir_path}: {e}")
-    
+                logging.warning(f"Failed to remove empty directory {dir_path}: {e}")
+
     if removed_count > 0:
         logging.debug(f"Removed {removed_count} empty directories")
     return removed_count
@@ -137,34 +138,37 @@ class TermiusModifier:
         self.applied_rules = set()
 
     def apply_macos_fix(self):
+        """应用 macOS 系统修复（重新计算文件 hash）"""
         logging.info("Applying macOS fix...")
         script_path = os.path.join(self._script_dir, "macos", "osxfix.sh")
         run_command(["chmod", "+x", script_path])
-        # 以 list 形式执行脚本（脚本已赋可执行权限）
         cmd = [script_path]
         if self.args.beta:
             cmd.append("--beta")
         run_command(cmd)
-        logging.info("MacOS fix applied.")
+        logging.info("macOS fix applied successfully")
 
     def load_rules(self):
-        """动态加载与参数同名的规则文件"""
-        # 定义需要处理的参数列表
+        """动态加载与参数同名的规则文件
+
+        支持的规则类型：skip_login, trial, style, localize
+        规则格式：原字符串|新字符串 或 /正则表达式/|替换内容
+        """
         rule_args = ["skip_login", "trial", "style", "localize"]
 
         for arg in rule_args:
             if not getattr(self.args, arg, False):
                 continue
-            # 自动生成文件名, 强制保持参数名与文件名一致
             file_name = f"{arg}.txt"
             try:
                 file_path = os.path.join(self._rules_dir, file_name)
                 if content := read_file(file_path):
                     self.loaded_rules.extend(content)
             except Exception as e:
-                logging.error(f"Error loading {file_name}: {e}")
+                logging.error(f"Failed to load rules from {file_name}: {e}")
                 sys.exit(1)
 
+        # 编译规则：区分注释、正则表达式和普通文本
         self.compiled_rules = []
         for line in self.loaded_rules:
             if is_comment_line(line):
@@ -177,102 +181,102 @@ class TermiusModifier:
                 else:
                     self.compiled_rules.append(("plain", line, old_val, new_val))
             except ValueError as e:
-                logging.error(f"Skipping invalid rule: {line} -> {str(e)}")
+                logging.warning(f"Skipping invalid rule: {line} - {str(e)}")
             except re.error as e:
-                logging.error(f"Regex error: {line} -> {str(e)}")
+                logging.warning(f"Regex compilation error in rule: {line} - {str(e)}")
 
     def decompress_asar(self):
-        """解压 app.asar 文件（使用 list 调用，避免 shell/空格问题）"""
+        """解压 app.asar 文件到 app 目录"""
         cmd = [get_asar_cmd(), "extract", self._original_path, self._app_dir]
         run_command(cmd)
 
     def copy_unpacked_files(self):
-        """将解包文件复制到脚本目录下的指定文件夹"""
+        """复制解包文件到 extract 目录并提取字符串"""
         try:
-            # 如果目标目录已存在，先删除
+            # 清理已存在的解包目录
             if os.path.exists(self._unpack_dir):
                 shutil.rmtree(self._unpack_dir)
                 logging.debug(f"Removed existing unpack directory: {self._unpack_dir}")
 
+            # 仅复制 JS、JSON、CSS 文件，排除 node_modules
             ignore_func = create_ignore_filter(["node_modules"], ["*.js", "*.json", "*.css"])
             shutil.copytree(self._app_dir, self._unpack_dir, ignore=ignore_func)
             remove_empty_dirs(self._unpack_dir)
 
-            logging.info(f"解包文件已复制到|Unpacked files copied to: {self._unpack_dir}")
+            logging.info(f"Unpacked files copied to {self._unpack_dir}")
 
-            # 提取所有JSON和JS文件中的字符串
+            # 提取所有字符串用于本地化参考
             self.extract_all_strings()
 
         except Exception as e:
-            logging.error(f"复制解包文件失败|Failed to copy unpacked files: {e}")
+            logging.error(f"Failed to copy unpacked files: {e}")
 
     def extract_all_strings(self):
-        """提取所有JSON和JS文件中的字符串到extract目录"""
+        """从 JS 和 JSON 文件中提取所有字符串到 allstring.txt
+
+        提取双引号、单引号和模板字符串，过滤短字符串和纯数字
+        """
         try:
-            # 确保extract目录存在
             extract_dir = os.path.join(self._script_dir, "extract")
             os.makedirs(extract_dir, exist_ok=True)
-
             all_strings_file = os.path.join(extract_dir, "allstring.txt")
 
-            # 收集所有字符串
+            # 编译正则表达式（避免重复编译）
+            patterns = [
+                re.compile(r'"([^"\\]*(?:\\.[^"\\]*)*)"'),
+                re.compile(r"'([^'\\]*(?:\\.[^'\\]*)*)'"),
+                re.compile(r'`([^`\\]*(?:\\.[^`\\]*)*)`'),
+            ]
+
+            # 数字模式（用于过滤）
+            number_pattern = re.compile(r'^[0-9.+\-]*$')
+
             all_strings = set()
 
-            # 遍历解包目录中的所有文件
-            for root, dirs, files in os.walk(self._unpack_dir):
+            # 遍历所有 JS 和 JSON 文件
+            for root, _, files in os.walk(self._unpack_dir):
                 for file in files:
-                    if file.endswith(('.js', '.json')):
-                        file_path = os.path.join(root, file)
-                        try:
-                            with open(file_path, 'r', encoding='utf-8') as f:
-                                content = f.read()
+                    if not file.endswith(('.js', '.json')):
+                        continue
 
-                                # 提取双引号字符串
-                                double_quoted_strings = re.findall(r'"([^"\\]*(?:\\.[^"\\]*)*)"', content)
+                    file_path = os.path.join(root, file)
+                    try:
+                        with open(file_path, 'r', encoding='utf-8') as f:
+                            content = f.read()
 
-                                # 提取单引号字符串
-                                single_quoted_strings = re.findall(r"'([^'\\]*(?:\\.[^'\\]*)*)'", content)
+                        # 提取三种类型的字符串
+                        for pattern in patterns:
+                            all_strings.update(pattern.findall(content))
+                    except Exception as e:
+                        logging.debug(f"Cannot read file {file_path}: {e}")
 
-                                # 提取模板字符串
-                                template_strings = re.findall(r'`([^`\\]*(?:\\.[^`\\]*)*)`', content)
+            # 过滤：长度>1、非空白、非纯数字，按长度和字母排序
+            filtered_strings = sorted(
+                [s for s in all_strings if len(s) > 1 and not s.isspace() and not number_pattern.match(s)],
+                key=lambda x: (len(x), x.lower())
+            )
 
-                                # 添加到集合中
-                                all_strings.update(double_quoted_strings)
-                                all_strings.update(single_quoted_strings)
-                                all_strings.update(template_strings)
-
-                        except Exception as e:
-                            logging.debug(f"无法读取文件|Cannot read file {file_path}: {e}")
-                            continue
-
-            # 过滤和排序字符串
-            filtered_strings = sorted([
-                s for s in all_strings
-                if len(s) > 1 and not s.isspace() and not re.match(r'^[0-9.+\-]*$', s)
-            ], key=lambda x: (len(x), x.lower()))
-
-            # 写入文件
+            # 写入提取结果
             with open(all_strings_file, 'w', encoding='utf-8') as f:
-                f.write("# 从app.asar中提取的所有字符串\n")
+                f.write("# 从 app.asar 中提取的所有字符串\n")
                 f.write("# All strings extracted from app.asar\n")
                 f.write(f"# 总计: {len(filtered_strings)} 个字符串\n")
                 f.write(f"# Total: {len(filtered_strings)} strings\n")
                 f.write("=" * 80 + "\n\n")
 
                 for i, string in enumerate(filtered_strings, 1):
-                    # 转义特殊字符以便于阅读
                     escaped_string = string.replace('\n', '\\n').replace('\t', '\\t').replace('\r', '\\r')
                     f.write(f"{i:4}. {escaped_string}\n")
 
-            logging.info(f"字符串提取完成|String extraction completed: {all_strings_file}")
-            logging.info(f"提取到 {len(filtered_strings)} 个字符串|Extracted {len(filtered_strings)} strings")
+            logging.info("String extraction completed")
+            logging.info(f"Output: {all_strings_file}")
+            logging.info(f"Total strings extracted: {len(filtered_strings)}")
 
         except Exception as e:
-            logging.error(f"字符串提取失败|Failed to extract strings: {e}")
+            logging.error(f"Failed to extract strings: {e}")
 
     def pack_to_asar(self):
-        """打包 app.asar 文件（使用 list 调用，避免 shell/空格问题）"""
-        # 注意：将 --unpack-dir 作为单独的 arg 传入
+        """将修改后的 app 目录打包回 app.asar"""
         cmd = [
             get_asar_cmd(),
             "pack",
@@ -284,41 +288,41 @@ class TermiusModifier:
         run_command(cmd)
 
     def restore_backup(self):
-        """完整还原操作"""
+        """从备份文件恢复原始 app.asar"""
         if not os.path.exists(self._backup_path):
-            logging.info("未找到备份文件，跳过恢复备份|Backup file not found, skip backup restore.")
+            logging.info("Backup file not found, skipping restore")
             return
 
         shutil.copy(self._backup_path, self._original_path)
-        logging.info("已从备份恢复|Restored from backup.")
+        logging.info("Restored from backup successfully")
 
     def create_backup(self):
-        """智能备份管理（仅在缺失时创建）"""
+        """创建初始备份（仅在备份不存在时）"""
         if not os.path.exists(self._backup_path):
             shutil.copy(self._original_path, self._backup_path)
-            logging.info("创建初始备份|Created initial backup.")
+            logging.info("Initial backup created")
 
     def manage_workspace(self):
-        # 备份
+        """管理工作区：创建备份并清理临时文件"""
         self.create_backup()
         self.clean_workspace()
 
     def clean_workspace(self):
-        # 还原备份
+        """清理工作区：恢复备份并删除临时 app 目录"""
         self.restore_backup()
-        # 清理
         if os.path.exists(self._app_dir):
             safe_rmtree(self._app_dir)
-            logging.debug("Cleaned app directory.")
+            logging.debug("Cleaned app directory")
 
     def restore_changes(self):
+        """完全还原：清理工作区并删除备份文件"""
         self.clean_workspace()
         if os.path.exists(self._backup_path):
             os.remove(self._backup_path)
 
     def replace_rules(self):
-        """规则替换"""
-        logging.info("开始替换规则...|Starting replacement...")
+        """对所有代码文件应用规则替换"""
+        logging.info("Starting rule replacement...")
         code_files = self.collect_code_files()
         for file_path in code_files:
             if not os.path.exists(file_path):
@@ -330,11 +334,15 @@ class TermiusModifier:
                 if new_content != content:
                     write_file_atomic(file_path, new_content)
             except Exception as e:
-                logging.error(f"Process file failed: {file_path} - {e}")
-        logging.info("替换与写入完成|Replacement and writing completed.")
+                logging.error(f"Failed to process file {file_path}: {e}")
+        logging.info("Rule replacement completed")
 
     def replace_content(self, file_content):
-        """执行内容替换的核心逻辑"""
+        """对单个文件内容执行所有规则的替换
+
+        Returns:
+            tuple: (新内容, 匹配的规则集合)
+        """
         if not file_content:
             return file_content, set()
         if not self.compiled_rules:
@@ -351,13 +359,12 @@ class TermiusModifier:
             else:
                 file_content = file_content.replace(old_or_pattern, new_val)
             if original_content != file_content:
-                # 仅关注内容是否改变
                 matched_rules.add(line)
 
         return file_content, matched_rules
 
     def collect_code_files(self):
-        """获取所有代码文件路径"""
+        """收集需要处理的代码文件（JS 和可选的 CSS）"""
         prefix_links = [
             os.path.join(self._app_dir, "background-process", "assets"),
             os.path.join(self._app_dir, "ui-process", "assets"),
@@ -371,7 +378,10 @@ class TermiusModifier:
         return code_files
 
     def apply_changes(self):
-        """规则替换功能"""
+        """执行完整的修改流程：解压->加载规则->替换->打包
+
+        支持的修改类型：localize, trial, skip_login, style
+        """
         start_time = time.monotonic()
         self.manage_workspace()
         self.decompress_asar()
@@ -381,20 +391,21 @@ class TermiusModifier:
         if is_macos():
             self.apply_macos_fix()
         elapsed = time.monotonic() - start_time
-        logging.info(f"汉化在 {elapsed:.2f} 秒内完成|Replacement done in {elapsed:.2f} seconds.")
+        logging.info(f"Changes applied in {elapsed:.2f}s")
 
-        logging.info(f"应用规则|Rules applied: {len(self.applied_rules)}/{len(self.loaded_rules)}")
+        # 统计规则匹配情况
+        logging.info(f"Rules applied: {len(self.applied_rules)}/{len(self.loaded_rules)}")
         unmatched_rules = list(filter(lambda x: x not in self.applied_rules, self.loaded_rules))
         if unmatched_rules:
             if len(unmatched_rules) > 3:
-                logging.warning(f"Found {len(unmatched_rules)} unmatched rules. Check debug log for details.")
+                logging.warning(f"{len(unmatched_rules)} rules did not match. See debug log for details.")
             rules_list = "\n".join([f"{i + 1:>4}. {rule}" for i, rule in enumerate(unmatched_rules)])
-            logging.debug(f"Unmatched rules ({len(unmatched_rules)}):\n{rules_list}")
+            logging.debug(f"Unmatched rules:\n{rules_list}")
         else:
-            logging.debug("All rules matched.")
+            logging.debug("All rules matched successfully")
 
     def find_in_content(self):
-        """文件内容搜索功能"""
+        """在代码文件中搜索包含所有指定关键词的文件"""
         find_terms = self.args.find
 
         if not os.path.exists(self._app_dir):
@@ -407,88 +418,80 @@ class TermiusModifier:
             try:
                 file_content = read_file(file_path, strip_empty=False)
             except Exception as e:
-                logging.warning(f"Skip unreadable file: {file_path} - {e}")
+                logging.warning(f"Skipping unreadable file: {file_path} - {e}")
                 continue
             if file_content and all(term in file_content for term in find_terms):
                 found_files.append(file_path)
 
-        # 创建分隔线
+        # 输出搜索结果
         separator = "=" * 60
+        terms_list = "\n".join([f"  • {term}" for term in find_terms])
+
+        logging.info(separator)
+        logging.info("Search results" if found_files else "No results found")
+        logging.info(separator)
+        logging.info(f"Search terms ({len(find_terms)}):\n{terms_list}")
 
         if found_files:
-            # 构建搜索项列表字符串
-            terms_list = "\n".join([f"  • {term}" for term in find_terms])
-            # 构建文件列表字符串
             files_list = "\n".join([f"  • {file_path}" for file_path in found_files])
-
-            logging.info(f"{separator}")
-            logging.info(f"搜索结果|SEARCH RESULTS")
-            logging.info(f"{separator}")
-            logging.info(f"搜索目标|Search terms ({len(find_terms)}):")
-            logging.info(f"{terms_list}")
-            logging.info(f"在这些文件中找到|Found in files ({len(found_files)}):")
-            logging.info(f"\n{files_list}")
-            logging.info(f"{separator}")
+            logging.info(f"Found in {len(found_files)} file(s):\n{files_list}")
         else:
-            terms_list = "\n".join([f"  • {term}" for term in find_terms])
-            logging.warning(f"{separator}")
-            logging.warning("无结果|NO RESULTS FOUND")
-            logging.warning(f"{separator}")
-            logging.warning(f"搜索目标|Search terms ({len(find_terms)}):")
-            logging.warning(f"{terms_list}")
-            logging.warning(f"没有在解包文件中搜索到目标|No files contain all the above terms.")
-            logging.warning(f"{separator}")
+            logging.info("No files contain all the specified terms.")
+
+        logging.info(separator)
 
     def extract_and_unpack(self):
-        """执行解包和提取字符串功能"""
-        logging.info("开始执行解包和字符串提取...|Starting unpack and string extraction...")
+        """执行解包和字符串提取（不应用任何规则）"""
+        logging.info("Starting unpack and string extraction...")
         start_time = time.monotonic()
 
-        # 创建备份
         self.create_backup()
-
-        # 解包 asar 文件
         self.decompress_asar()
-
-        # 复制解包文件并提取字符串
         self.copy_unpacked_files()
 
         elapsed = time.monotonic() - start_time
-        logging.info(f"解包和字符串提取在 {elapsed:.2f} 秒内完成|Unpack and string extraction done in {elapsed:.2f} seconds.")
+        logging.info(f"Unpack and string extraction completed in {elapsed:.2f} seconds")
 
 
 def get_asar_cmd():
-    """
-    Windows 下使用 asar.cmd
-    macOS / Linux 使用 asar
+    """根据操作系统返回 asar 命令
+
+    Windows: asar.cmd
+    macOS/Linux: asar
     """
     return "asar.cmd" if is_windows() else "asar"
 
 
 def run_command(cmd, shell=False):
-    """执行系统命令"""
+    """执行系统命令，失败时退出程序"""
     if isinstance(cmd, list):
-        logging.info(f"运行命令|Running command: {' '.join(cmd)}")
+        logging.debug(f"Running command: {' '.join(cmd)}")
     else:
-        logging.info(f"运行命令|Running command: {cmd}")
+        logging.debug(f"Running command: {cmd}")
     try:
         subprocess.run(cmd, shell=shell, check=True)
     except subprocess.CalledProcessError as e:
-        logging.error(f"Command failed: {e}")
+        logging.error(f"Command failed with exit code {e.returncode}: {' '.join(cmd) if isinstance(cmd, list) else cmd}")
+        sys.exit(1)
+    except FileNotFoundError as e:
+        logging.error(f"Command not found: {cmd}")
         sys.exit(1)
     except Exception as e:
-        logging.error(f"Error: {e}")
+        logging.error(f"Unexpected error executing command: {e}")
         sys.exit(1)
 
 
 def _handle_remove_readonly(func, path, _):
-    """处理只读文件"""
+    """shutil.rmtree 的错误处理回调：移除只读属性后重试"""
     os.chmod(path, stat.S_IWRITE)
     func(path)
 
 
 def safe_rmtree(path):
-    """安全删除目录"""
+    """安全删除目录，处理只读文件
+
+    Python 3.12+ 使用 onexc，之前版本使用 onerror
+    """
     if not os.path.exists(path):
         return
     if sys.version_info >= (3, 12):
@@ -498,7 +501,12 @@ def safe_rmtree(path):
 
 
 def read_file(file_path, strip_empty=True):
-    """安全读取文件内容"""
+    """读取文件内容
+
+    Args:
+        file_path: 文件路径
+        strip_empty: 是否去除空行并返回列表，否则返回完整字符串
+    """
     try:
         with open(file_path, "r", encoding="utf-8") as file:
             return [line.rstrip("\r\n") for line in file if line.strip()] if strip_empty else file.read()
@@ -507,7 +515,7 @@ def read_file(file_path, strip_empty=True):
 
 
 def write_file_atomic(file_path, content):
-    """原子写入文件，避免中断导致目标文件损坏"""
+    """原子写入文件：先写临时文件再替换，避免中断导致损坏"""
     file_dir = os.path.dirname(file_path) or "."
     temp_path = None
     try:
@@ -525,25 +533,27 @@ def write_file_atomic(file_path, content):
 
 
 def is_comment_line(line):
-    """判断是否为注释行"""
+    """判断是否为注释行（以 # 开头）"""
     return line.strip().startswith("#")
 
 
 def is_regex_pattern(s):
-    """判断是否为正则表达式模式(/pattern/格式)"""
+    """判断是否为正则表达式模式（/pattern/ 格式，排除 // 注释）"""
     return len(s) > 1 and s.startswith("/") and s.endswith("/") and "//" not in s
 
 
 def parse_replace_rule(rule):
-    """分割替换规则"""
+    """解析替换规则：原字符串|新字符串
+
+    使用 | 作为分隔符，最多分割一次以支持替换内容中包含 |
+    """
     if "|" not in rule:
         raise ValueError("Invalid replacement rule format.")
-    # 最多分割一次
     return rule.split("|", 1)
 
 
 def is_valid_path(path):
-    """验证路径是否合法"""
+    """验证路径是否存在且为目录"""
     return path and os.path.isdir(path)
 
 
@@ -553,13 +563,12 @@ def check_asar_existence(path):
 
 
 def check_asar_installed():
-    """检查是否安装了 asar 命令"""
-    # 改为 list 调用，避免依赖 shell
+    """检查 asar 命令是否已安装"""
     run_command([get_asar_cmd(), "--version"])
 
 
 def select_directory(title):
-    """弹出文件夹选择对话框, 手动文件夹路径"""
+    """弹出文件夹选择对话框"""
     try:
         root = tk.Tk()
         root.withdraw()
@@ -567,7 +576,7 @@ def select_directory(title):
         root.destroy()
         return selected_path if is_valid_path(selected_path) else None
     except Exception as e:
-        logging.error(f"An error occurred: {e}")
+        logging.error(f"Failed to select directory: {e}")
         sys.exit(1)
 
 
@@ -580,7 +589,13 @@ def is_windows():
 
 
 def get_termius_path(beta=False):
-    """获取 Termius 的路径"""
+    """获取 Termius 安装路径
+
+    自动检测各平台默认路径，若未找到则弹出对话框让用户选择
+
+    Args:
+        beta: 是否为 Beta 版本
+    """
     app_name = "Termius Beta" if beta else "Termius"
     default_paths = {
         "Windows": lambda: os.path.join(os.getenv("LOCALAPPDATA", ""), "Programs", app_name, "resources"),
@@ -591,23 +606,25 @@ def get_termius_path(beta=False):
     path_generator = default_paths.get(system)
 
     if path_generator:
-        # 调用 lambda 函数生成路径
         termius_path = path_generator()
     else:
-        logging.error(f"Unsupported OS: {system}")
+        logging.error(f"Unsupported operating system: {system}")
         sys.exit(1)
+
+    # 验证路径有效性，无效则让用户手动选择
     if not check_asar_existence(termius_path):
-        logging.warning(f"Termius app.asar file not found at: {os.path.join(termius_path, 'app.asar')}")
-        logging.info("Please select the correct Termius folder.")
-        termius_path = select_directory("Please select the Termius path containing app.asar.")
+        logging.warning(f"app.asar not found at default location: {termius_path}")
+        logging.info("Please select the Termius installation directory manually.")
+        termius_path = select_directory("Select Termius directory containing app.asar")
         if not termius_path or not check_asar_existence(termius_path):
-            logging.error("Valid Termius app.asar file not found. Exiting.")
+            logging.error("Valid app.asar file not found. Exiting.")
             sys.exit(1)
 
     return termius_path
 
 
 def main():
+    """主函数：解析参数并执行相应操作"""
     parser = argparse.ArgumentParser(description="Modify Termius application.")
     parser.add_argument("-b", "--beta", action="store_true", help="Specify if this is a beta version.")
     parser.add_argument("-l", "--localize", action="store_true",
@@ -618,23 +635,25 @@ def main():
     parser.add_argument("-e", "--extract", action="store_true", help="Unpack and extract application strings.")
     parser.add_argument("-f", "--find", nargs="+", help="Multi-mode search operation.")
     parser.add_argument("-r", "--restore", action="store_true", help="Restore software to initial state.")
-    parser.add_argument("--log-level", type=lambda s: s.upper(),
+    parser.add_argument("-v", "--verbose", type=lambda s: s.upper(), dest='log_level',
                         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], default='INFO',
-                        help="Set logging level: DEBUG|INFO|WARNING|ERROR|CRITICAL (default: %(default)s)")
+                        help="Set logging verbosity: DEBUG|INFO|WARNING|ERROR|CRITICAL (default: %(default)s)")
 
     args = parser.parse_args()
 
-    # 日志配置
-    logging.basicConfig(level=args.log_level, format="%(asctime)s - %(levelname)7s - %(message)s", force=True)
+    # 配置日志
+    setup_logging(args.log_level)
 
-    # 如果没有提供参数，默认执行 `--localize`
+    # 无参数时默认执行汉化
     if not any((args.trial, args.find, args.style, args.skip_login, args.localize, args.restore, args.extract)):
         args.localize = True
+        logging.info("No arguments provided, defaulting to localization mode")
 
     check_asar_installed()
     termius_path = get_termius_path(args.beta)
     modifier = TermiusModifier(termius_path, args)
 
+    # 根据参数执行对应操作
     if any((args.trial, args.style, args.skip_login, args.localize)):
         modifier.apply_changes()
     elif args.find:
@@ -644,7 +663,7 @@ def main():
     elif args.restore:
         modifier.restore_changes()
     else:
-        logging.error("Invalid command. Use '--help'.")
+        logging.error("Invalid command. Use '--help' for usage information.")
 
 
 if __name__ == "__main__":

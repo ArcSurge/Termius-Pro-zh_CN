@@ -51,16 +51,16 @@ python lang.py --extract
 
 ## 🔬 参数详解
 
-| 参数                | 简写   | 功能说明     | 示例                                  |
-|-------------------|------|----------|-------------------------------------|
-| `--localize`      | `-l` | 汉化操作(默认) | `python lang.py`                    |
-| `--trial`         | `-t` | 激活试用功能   | `python lang.py -lt`                |
-| `--skip-login`    | `-k` | 跳过登录验证   | `python lang.py -lk`                |
-| `--style`         | `-s` | 样式修改     | `python lang.py -ls`                |
-| `--restore`       | `-r` | 还原操作     | `python lang.py -r`                 |
-| `--find <关键词...>` | `-f` | 多条件联合搜索  | `python lang.py -f "term1" "term2"` |
-| `--extract`       | `-e` | 提取所有可能的字符串 | `python lang.py -e`              |
-| `--verbose`       | `-v` | 设置日志级别   | `python lang.py -v DEBUG`           |
+| 参数                | 简写   | 功能说明       | 示例                                  |
+|-------------------|------|------------|-------------------------------------|
+| `--localize`      | `-l` | 汉化操作(默认)   | `python lang.py`                    |
+| `--trial`         | `-t` | 激活试用功能     | `python lang.py -lt`                |
+| `--skip-login`    | `-k` | 跳过登录验证     | `python lang.py -lk`                |
+| `--style`         | `-s` | 样式修改       | `python lang.py -ls`                |
+| `--restore`       | `-r` | 还原操作       | `python lang.py -r`                 |
+| `--find <关键词...>` | `-f` | 多条件联合搜索    | `python lang.py -f "term1" "term2"` |
+| `--extract`       | `-e` | 提取所有可能的字符串 | `python lang.py -e`                 |
+| `--verbose`       | `-v` | 设置日志级别     | `python lang.py -v DEBUG`           |
 
 ## 📂 相关文件结构
 
@@ -81,18 +81,19 @@ extract/
 
 1. 前往 [Releases][releases] 下载对应版本的 `app.asar` 文件。
 2. 找到 Termius 安装目录，通常位置为:
-    - **Windows**: `C:\Users\你的用户名\AppData\Local\Programs\Termius`。
-    - **Linux**: `/opt/Termius`。
-    - **MacOS**: `/Applications/Termius.app/Contents`。
+  - **Windows**: `C:\Users\你的用户名\AppData\Local\Programs\Termius`。
+  - **Linux**: `/opt/Termius`。
+  - **MacOS**: `/Applications/Termius.app/Contents`。
 3. 将下载的 `app.asar` 文件覆盖 `resources` 文件夹下的 `app.asar` 文件。
-   -  **注意**，macOS 替换后需要运行 [osxfix.sh](macos/osxfix.sh) 重新计算文件 hash 后方可使用。
+  - **注意**，macOS 替换后需要运行 [osxfix.sh](macos/osxfix.sh) 重新计算文件 hash 后方可使用。
 4. 如果你不想自动更新，请删除 `app-update.yml` 文件。
 5. 最后，如果没有想要的版本，可在 [Fork][fork] 本项目后前往仓库的 **Settings > Secrets and variables > Actions > Variables** 页面定义变量:
-   - **Name**: `RELEASE_LIST`
-   - **Value**: `l,lk,lt`
-   - 默认`l,lk,lt`，代表生成三个版本，l为汉化，lt为汉化+试用，lk为汉化+跳过登录。可自行修改，通过逗号分隔。
+  - **Name**: `RELEASE_LIST`
+  - **Value**: `l,lk,lt`
+  - 默认`l,lk,lt`，代表生成三个版本，l为汉化，lt为汉化+试用，lk为汉化+跳过登录。可自行修改，通过逗号分隔。
 
 ## 📱 关于安卓版
+
 - 目前只有汉化功能，暂无其他功能。并且部分词条在源码中，暂未汉化。
 - 由于手机端和桌面端版本号不同，因此安卓版本不会发布在 `Releases` 中，而是暂时托管在 [Actions][localize-android]。[Actions][localize-android] 每天运行一次，请自行查找对应版本进行下载。注意，这个是需要**登录**才可以下载的。
 - 若你计划 [Fork][fork] 此项目，请在 [Fork][fork] 后前往仓库的 **Settings > Secrets and variables > Actions > Secrets** 页面，点击 <kbd>New repository secret</kbd> 定义私密变量。
@@ -107,11 +108,12 @@ extract/
     base64 -w 0 Termius_zh.jks > Termius_zh_base64.txt
       ```
   - 后前往仓库的 **Settings > Secrets and variables > Actions > Secrets** 页面，点击 <kbd>New repository secret</kbd> 定义私密变量。
-  
+
   - **Name**: `SIGNING_KEY`
   - **Value**: 填写 [Termius_zh_base64.txt](Base64生成的文件) 文件内容（请根据需要修改文件内容）
 
 ### 🤖 关于脚本
+
 - 安卓相关资源均存放在 [android](android) 目录下。
 - 所需工具：
   - python（运行环境）
@@ -132,10 +134,27 @@ extract/
 
 ## 📖 常见问题
 
-1. ModuleNotFoundError: No module named 'tkinter'
-    - 缺少 tkinter 模块，请确保已安装 tkinter 模块。
-2. PermissionError: [Errno 13] Permission denied: '***/resources/app.asar.bak'
-    - 请检查权限，确保当前用户有`resources`目录写入权限。
+### Q1: ModuleNotFoundError: No module named 'tkinter'
+
+**Q：** Python 缺少 tkinter 图形界面库。
+
+**A：**
+
+- **Windows:** tkinter 通常随 Python 一起安装，如缺失请重新安装 Python 并勾选 "tcl/tk and IDLE" 选项。
+- **macOS:** 使用 Homebrew 安装：`brew install python-tk`
+- **Linux (Ubuntu/Debian):** `sudo apt-get install python3-tk`
+- **Linux (Fedora):** `sudo dnf install python3-tkinter`
+
+### Q2: PermissionError: Permission denied
+
+**Q：** 没有足够的权限访问或修改 Termius 安装目录。
+
+**A：**
+
+- **Windows:** 以管理员身份运行终端（右键 → 以管理员身份运行）
+- **macOS/Linux:** 在命令前添加 `sudo`，例如：`sudo python lang.py -l`
+- 确保 Termius 已完全关闭，没有后台进程占用文件
+- 请检查权限，确保当前用户有 `resources` 目录的写权限
 
 ## 🔔 注意事项
 
@@ -149,7 +168,6 @@ extract/
 - 用于测试和学习研究，禁止用于商业用途，不能保证其合法性、准确性、完整性和有效性，请根据情况自行判断。
 - 本人对任何问题概不负责，包括但不限于由任何脚本错误导致的任何损失或损害，使用即表示知晓风险。
 - 保留随时终止项目的权利。
-
 
 <!-- LINK -->
 [termius]: https://termius.com

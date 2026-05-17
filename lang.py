@@ -16,6 +16,86 @@ from tkinter import filedialog
 from logger import setup_logging
 
 
+def is_macos():
+    """检测是否为 macOS 系统"""
+    return platform.system() == 'Darwin'
+
+
+def is_windows():
+    """检测是否为 Windows 系统"""
+    return platform.system() == 'Windows'
+
+
+def _handle_remove_readonly(func, path, _):
+    """shutil.rmtree 的错误处理回调：移除只读属性后重试"""
+    os.chmod(path, stat.S_IWRITE)
+    func(path)
+
+
+def safe_rmtree(path):
+    """安全删除目录，处理只读文件
+
+    Python 3.12+ 使用 onexc，之前版本使用 onerror
+    """
+    if not os.path.exists(path):
+        return
+    if sys.version_info >= (3, 12):
+        shutil.rmtree(path, onexc=_handle_remove_readonly)
+    else:
+        shutil.rmtree(path, onerror=_handle_remove_readonly)
+
+
+def read_file(file_path, strip_empty=True):
+    """读取文件内容
+
+    Args:
+        file_path: 文件路径
+        strip_empty: 是否去除空行并返回列表，否则返回完整字符串
+    """
+    try:
+        with open(file_path, "r", encoding="utf-8") as file:
+            return [line.rstrip("\r\n") for line in file if line.strip()] if strip_empty else file.read()
+    except Exception as e:
+        raise RuntimeError(f"Read error: {file_path} - {e}") from e
+
+
+def write_file_atomic(file_path, content):
+    """原子写入文件：先写临时文件再替换，避免中断导致损坏"""
+    file_dir = os.path.dirname(file_path) or "."
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=file_dir, delete=False) as temp_file:
+            temp_file.write(content)
+            temp_path = temp_file.name
+        if temp_path is not None:
+            os.replace(temp_path, file_path)
+    finally:
+        if temp_path is not None and os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+            except OSError:
+                pass
+
+
+def remove_empty_dirs(directory):
+    """递归删除空目录，返回删除数量"""
+    removed_count = 0
+    for root, dirs, files in os.walk(directory, topdown=False):
+        for dir_name in dirs[:]:
+            dir_path = os.path.join(root, dir_name)
+            try:
+                with os.scandir(dir_path) as it:
+                    if not any(it):
+                        os.rmdir(dir_path)
+                        removed_count += 1
+            except OSError as e:
+                logging.warning(f"Failed to remove empty directory {dir_path}: {e}")
+
+    if removed_count > 0:
+        logging.debug(f"Removed {removed_count} empty directories")
+    return removed_count
+
+
 def create_ignore_filter(ignore_patterns=None, allow_patterns=None):
     """创建文件过滤函数
 
@@ -81,23 +161,115 @@ def _match_pattern(name, pattern, is_dir, is_root=False):
     return name == pattern if not has_wildcard else fnmatch.fnmatch(name, pattern)
 
 
-def remove_empty_dirs(directory):
-    """递归删除空目录，返回删除数量"""
-    removed_count = 0
-    for root, dirs, files in os.walk(directory, topdown=False):
-        for dir_name in dirs[:]:
-            dir_path = os.path.join(root, dir_name)
-            try:
-                with os.scandir(dir_path) as it:
-                    if not any(it):
-                        os.rmdir(dir_path)
-                        removed_count += 1
-            except OSError as e:
-                logging.warning(f"Failed to remove empty directory {dir_path}: {e}")
+def is_comment_line(line):
+    """判断是否为注释行（以 # 开头）"""
+    return line.strip().startswith("#")
 
-    if removed_count > 0:
-        logging.debug(f"Removed {removed_count} empty directories")
-    return removed_count
+
+def is_regex_pattern(s):
+    """判断是否为正则表达式模式（/pattern/ 格式，排除 // 注释）"""
+    return len(s) > 1 and s.startswith("/") and s.endswith("/") and "//" not in s
+
+
+def parse_replace_rule(rule):
+    """解析替换规则：原字符串|新字符串
+
+    使用 | 作为分隔符，最多分割一次以支持替换内容中包含 |
+    """
+    if "|" not in rule:
+        raise ValueError("Invalid replacement rule format.")
+    return rule.split("|", 1)
+
+
+def get_asar_cmd():
+    """根据操作系统返回 asar 命令
+
+    Windows: asar.cmd
+    macOS/Linux: asar
+    """
+    return "asar.cmd" if is_windows() else "asar"
+
+
+def run_command(cmd, shell=False):
+    """执行系统命令，失败时退出程序"""
+    if isinstance(cmd, list):
+        logging.debug(f"Running command: {' '.join(cmd)}")
+    else:
+        logging.debug(f"Running command: {cmd}")
+    try:
+        subprocess.run(cmd, shell=shell, check=True)
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Command failed with exit code {e.returncode}: {' '.join(cmd) if isinstance(cmd, list) else cmd}")
+        sys.exit(1)
+    except FileNotFoundError:
+        logging.error(f"Command not found: {cmd}")
+        sys.exit(1)
+    except Exception as e:
+        logging.error(f"Unexpected error executing command: {e}")
+        sys.exit(1)
+
+
+def is_valid_path(path):
+    """验证路径是否存在且为目录"""
+    return path and os.path.isdir(path)
+
+
+def check_asar_existence(path):
+    """检查指定路径下是否存在 app.asar 文件"""
+    return os.path.exists(os.path.join(path, "app.asar"))
+
+
+def select_directory(title):
+    """弹出文件夹选择对话框"""
+    try:
+        root = tk.Tk()
+        root.withdraw()
+        selected_path = filedialog.askdirectory(title=title)
+        root.destroy()
+        return selected_path if is_valid_path(selected_path) else None
+    except Exception as e:
+        logging.error(f"Failed to select directory: {e}")
+        sys.exit(1)
+
+
+def get_termius_path(beta=False):
+    """获取 Termius 安装路径
+
+    自动检测各平台默认路径，若未找到则弹出对话框让用户选择
+
+    Args:
+        beta: 是否为 Beta 版本
+    """
+    app_name = "Termius Beta" if beta else "Termius"
+    default_paths = {
+        "Windows": lambda: os.path.join(os.getenv("LOCALAPPDATA", ""), "Programs", app_name, "resources"),
+        "Darwin": lambda: f"/Applications/{app_name}.app/Contents/Resources",
+        "Linux": lambda: f"/opt/{app_name}/resources"
+    }
+    system = platform.system()
+    path_generator = default_paths.get(system)
+
+    if path_generator:
+        termius_path = path_generator()
+    else:
+        logging.error(f"Unsupported operating system: {system}")
+        sys.exit(1)
+
+    # 验证路径有效性，无效则让用户手动选择
+    if not check_asar_existence(termius_path):
+        logging.warning(f"app.asar not found at default location: {termius_path}")
+        logging.info("Please select the Termius installation directory manually.")
+        termius_path = select_directory("Select Termius directory containing app.asar")
+        if not termius_path or not check_asar_existence(termius_path):
+            logging.error("Valid app.asar file not found. Exiting.")
+            sys.exit(1)
+
+    return termius_path
+
+
+def check_asar_installed():
+    """检查 asar 命令是否已安装"""
+    run_command([get_asar_cmd(), "--version"])
 
 
 class TermiusModifier:
@@ -137,57 +309,47 @@ class TermiusModifier:
         self.compiled_rules = []
         self.applied_rules = set()
 
-    def apply_macos_fix(self):
-        """应用 macOS 系统修复（重新计算文件 hash）"""
-        logging.info("Applying macOS fix...")
-        script_path = os.path.join(self._script_dir, "macos", "osxfix.sh")
-        run_command(["chmod", "+x", script_path])
-        cmd = [script_path]
-        if self.args.beta:
-            cmd.append("--beta")
-        run_command(cmd)
-        logging.info("macOS fix applied successfully")
+    def create_backup(self):
+        """创建初始备份（仅在备份不存在时）"""
+        if not os.path.exists(self._backup_path):
+            shutil.copy(self._original_path, self._backup_path)
+            logging.info("Initial backup created")
 
-    def load_rules(self):
-        """动态加载与参数同名的规则文件
+    def restore_backup(self):
+        """从备份文件恢复原始 app.asar"""
+        if not os.path.exists(self._backup_path):
+            logging.info("Backup file not found, skipping restore")
+            return
 
-        支持的规则类型：skip_login, trial, style, localize
-        规则格式：原字符串|新字符串 或 /正则表达式/|替换内容
-        """
-        rule_args = ["skip_login", "trial", "style", "localize"]
+        shutil.copy(self._backup_path, self._original_path)
+        logging.info("Restored from backup successfully")
 
-        for arg in rule_args:
-            if not getattr(self.args, arg, False):
-                continue
-            file_name = f"{arg}.txt"
-            try:
-                file_path = os.path.join(self._rules_dir, file_name)
-                if content := read_file(file_path):
-                    self.loaded_rules.extend(content)
-            except Exception as e:
-                logging.error(f"Failed to load rules from {file_name}: {e}")
-                sys.exit(1)
+    def clean_workspace(self):
+        """清理工作区：恢复备份并删除临时 app 目录"""
+        self.restore_backup()
+        if os.path.exists(self._app_dir):
+            safe_rmtree(self._app_dir)
+            logging.debug("Cleaned app directory")
 
-        # 编译规则：区分注释、正则表达式和普通文本
-        self.compiled_rules = []
-        for line in self.loaded_rules:
-            if is_comment_line(line):
-                self.compiled_rules.append(("comment", line, None, None))
-                continue
-            try:
-                old_val, new_val = parse_replace_rule(line)
-                if is_regex_pattern(old_val):
-                    self.compiled_rules.append(("regex", line, re.compile(old_val[1:-1]), new_val))
-                else:
-                    self.compiled_rules.append(("plain", line, old_val, new_val))
-            except ValueError as e:
-                logging.warning(f"Skipping invalid rule: {line} - {str(e)}")
-            except re.error as e:
-                logging.warning(f"Regex compilation error in rule: {line} - {str(e)}")
+    def manage_workspace(self):
+        """管理工作区：创建备份并清理临时文件"""
+        self.create_backup()
+        self.clean_workspace()
+
+    def restore_changes(self):
+        """完全还原：清理工作区并删除备份文件"""
+        self.clean_workspace()
+        if os.path.exists(self._backup_path):
+            os.remove(self._backup_path)
 
     def decompress_asar(self):
         """解压 app.asar 文件到 app 目录"""
         cmd = [get_asar_cmd(), "extract", self._original_path, self._app_dir]
+        run_command(cmd)
+
+    def pack_to_asar(self):
+        """将修改后的 app 目录打包回 app.asar"""
+        cmd = [get_asar_cmd(), "pack", self._app_dir, self._original_path, "--unpack-dir", "{node_modules/@termius,out}"]
         run_command(cmd)
 
     def copy_unpacked_files(self):
@@ -275,67 +437,56 @@ class TermiusModifier:
         except Exception as e:
             logging.error(f"Failed to extract strings: {e}")
 
-    def pack_to_asar(self):
-        """将修改后的 app 目录打包回 app.asar"""
-        cmd = [
-            get_asar_cmd(),
-            "pack",
-            self._app_dir,
-            self._original_path,
-            "--unpack-dir",
-            "{node_modules/@termius,out}"
-        ]
-        run_command(cmd)
+    def load_rules(self):
+        """动态加载与参数同名的规则文件
 
-    def restore_backup(self):
-        """从备份文件恢复原始 app.asar"""
-        if not os.path.exists(self._backup_path):
-            logging.info("Backup file not found, skipping restore")
-            return
+        支持的规则类型：skip_login, trial, style, localize
+        规则格式：原字符串|新字符串 或 /正则表达式/|替换内容
+        """
+        rule_args = ["skip_login", "trial", "style", "localize"]
 
-        shutil.copy(self._backup_path, self._original_path)
-        logging.info("Restored from backup successfully")
+        for arg in rule_args:
+            if not getattr(self.args, arg, False):
+                continue
+            file_name = f"{arg}.txt"
+            try:
+                file_path = os.path.join(self._rules_dir, file_name)
+                if content := read_file(file_path):
+                    self.loaded_rules.extend(content)
+            except Exception as e:
+                logging.error(f"Failed to load rules from {file_name}: {e}")
+                sys.exit(1)
 
-    def create_backup(self):
-        """创建初始备份（仅在备份不存在时）"""
-        if not os.path.exists(self._backup_path):
-            shutil.copy(self._original_path, self._backup_path)
-            logging.info("Initial backup created")
-
-    def manage_workspace(self):
-        """管理工作区：创建备份并清理临时文件"""
-        self.create_backup()
-        self.clean_workspace()
-
-    def clean_workspace(self):
-        """清理工作区：恢复备份并删除临时 app 目录"""
-        self.restore_backup()
-        if os.path.exists(self._app_dir):
-            safe_rmtree(self._app_dir)
-            logging.debug("Cleaned app directory")
-
-    def restore_changes(self):
-        """完全还原：清理工作区并删除备份文件"""
-        self.clean_workspace()
-        if os.path.exists(self._backup_path):
-            os.remove(self._backup_path)
-
-    def replace_rules(self):
-        """对所有代码文件应用规则替换"""
-        logging.info("Starting rule replacement...")
-        code_files = self.collect_code_files()
-        for file_path in code_files:
-            if not os.path.exists(file_path):
+        # 编译规则：区分注释、正则表达式和普通文本
+        self.compiled_rules = []
+        for line in self.loaded_rules:
+            if is_comment_line(line):
+                self.compiled_rules.append(("comment", line, None, None))
                 continue
             try:
-                content = read_file(file_path, strip_empty=False)
-                new_content, matched_rules = self.replace_content(content)
-                self.applied_rules.update(matched_rules)
-                if new_content != content:
-                    write_file_atomic(file_path, new_content)
-            except Exception as e:
-                logging.error(f"Failed to process file {file_path}: {e}")
-        logging.info("Rule replacement completed")
+                old_val, new_val = parse_replace_rule(line)
+                if is_regex_pattern(old_val):
+                    self.compiled_rules.append(("regex", line, re.compile(old_val[1:-1]), new_val))
+                else:
+                    self.compiled_rules.append(("plain", line, old_val, new_val))
+            except ValueError as e:
+                logging.warning(f"Skipping invalid rule: {line} - {str(e)}")
+            except re.error as e:
+                logging.warning(f"Regex compilation error in rule: {line} - {str(e)}")
+
+    def collect_code_files(self):
+        """收集需要处理的代码文件（JS 和可选的 CSS）"""
+        prefix_links = [
+            os.path.join(self._app_dir, "background-process", "assets"),
+            os.path.join(self._app_dir, "ui-process", "assets"),
+            os.path.join(self._app_dir, "main-process"),
+        ]
+        code_files = []
+        extensions = (".js", ".css") if self.args.style else ".js"
+        for prefix in prefix_links:
+            for root, _, files in os.walk(prefix):
+                code_files.extend([os.path.join(root, f) for f in files if f.endswith(extensions)])
+        return code_files
 
     def replace_content(self, file_content):
         """对单个文件内容执行所有规则的替换
@@ -363,19 +514,33 @@ class TermiusModifier:
 
         return file_content, matched_rules
 
-    def collect_code_files(self):
-        """收集需要处理的代码文件（JS 和可选的 CSS）"""
-        prefix_links = [
-            os.path.join(self._app_dir, "background-process", "assets"),
-            os.path.join(self._app_dir, "ui-process", "assets"),
-            os.path.join(self._app_dir, "main-process"),
-        ]
-        code_files = []
-        extensions = (".js", ".css") if self.args.style else ".js"
-        for prefix in prefix_links:
-            for root, _, files in os.walk(prefix):
-                code_files.extend([os.path.join(root, f) for f in files if f.endswith(extensions)])
-        return code_files
+    def replace_rules(self):
+        """对所有代码文件应用规则替换"""
+        logging.info("Starting rule replacement...")
+        code_files = self.collect_code_files()
+        for file_path in code_files:
+            if not os.path.exists(file_path):
+                continue
+            try:
+                content = read_file(file_path, strip_empty=False)
+                new_content, matched_rules = self.replace_content(content)
+                self.applied_rules.update(matched_rules)
+                if new_content != content:
+                    write_file_atomic(file_path, new_content)
+            except Exception as e:
+                logging.error(f"Failed to process file {file_path}: {e}")
+        logging.info("Rule replacement completed")
+
+    def apply_macos_fix(self):
+        """应用 macOS 系统修复（重新计算文件 hash）"""
+        logging.info("Applying macOS fix...")
+        script_path = os.path.join(self._script_dir, "macos", "osxfix.sh")
+        run_command(["chmod", "+x", script_path])
+        cmd = [script_path]
+        if self.args.beta:
+            cmd.append("--beta")
+        run_command(cmd)
+        logging.info("macOS fix applied successfully")
 
     def apply_changes(self):
         """执行完整的修改流程：解压->加载规则->替换->打包
@@ -451,176 +616,6 @@ class TermiusModifier:
 
         elapsed = time.monotonic() - start_time
         logging.info(f"Unpack and string extraction completed in {elapsed:.2f} seconds")
-
-
-def get_asar_cmd():
-    """根据操作系统返回 asar 命令
-
-    Windows: asar.cmd
-    macOS/Linux: asar
-    """
-    return "asar.cmd" if is_windows() else "asar"
-
-
-def run_command(cmd, shell=False):
-    """执行系统命令，失败时退出程序"""
-    if isinstance(cmd, list):
-        logging.debug(f"Running command: {' '.join(cmd)}")
-    else:
-        logging.debug(f"Running command: {cmd}")
-    try:
-        subprocess.run(cmd, shell=shell, check=True)
-    except subprocess.CalledProcessError as e:
-        logging.error(f"Command failed with exit code {e.returncode}: {' '.join(cmd) if isinstance(cmd, list) else cmd}")
-        sys.exit(1)
-    except FileNotFoundError:
-        logging.error(f"Command not found: {cmd}")
-        sys.exit(1)
-    except Exception as e:
-        logging.error(f"Unexpected error executing command: {e}")
-        sys.exit(1)
-
-
-def _handle_remove_readonly(func, path, _):
-    """shutil.rmtree 的错误处理回调：移除只读属性后重试"""
-    os.chmod(path, stat.S_IWRITE)
-    func(path)
-
-
-def safe_rmtree(path):
-    """安全删除目录，处理只读文件
-
-    Python 3.12+ 使用 onexc，之前版本使用 onerror
-    """
-    if not os.path.exists(path):
-        return
-    if sys.version_info >= (3, 12):
-        shutil.rmtree(path, onexc=_handle_remove_readonly)
-    else:
-        shutil.rmtree(path, onerror=_handle_remove_readonly)
-
-
-def read_file(file_path, strip_empty=True):
-    """读取文件内容
-
-    Args:
-        file_path: 文件路径
-        strip_empty: 是否去除空行并返回列表，否则返回完整字符串
-    """
-    try:
-        with open(file_path, "r", encoding="utf-8") as file:
-            return [line.rstrip("\r\n") for line in file if line.strip()] if strip_empty else file.read()
-    except Exception as e:
-        raise RuntimeError(f"Read error: {file_path} - {e}") from e
-
-
-def write_file_atomic(file_path, content):
-    """原子写入文件：先写临时文件再替换，避免中断导致损坏"""
-    file_dir = os.path.dirname(file_path) or "."
-    temp_path = None
-    try:
-        with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=file_dir, delete=False) as temp_file:
-            temp_file.write(content)
-            temp_path = temp_file.name
-        if temp_path is not None:
-            os.replace(temp_path, file_path)
-    finally:
-        if temp_path is not None and os.path.exists(temp_path):
-            try:
-                os.remove(temp_path)
-            except OSError:
-                pass
-
-
-def is_comment_line(line):
-    """判断是否为注释行（以 # 开头）"""
-    return line.strip().startswith("#")
-
-
-def is_regex_pattern(s):
-    """判断是否为正则表达式模式（/pattern/ 格式，排除 // 注释）"""
-    return len(s) > 1 and s.startswith("/") and s.endswith("/") and "//" not in s
-
-
-def parse_replace_rule(rule):
-    """解析替换规则：原字符串|新字符串
-
-    使用 | 作为分隔符，最多分割一次以支持替换内容中包含 |
-    """
-    if "|" not in rule:
-        raise ValueError("Invalid replacement rule format.")
-    return rule.split("|", 1)
-
-
-def is_valid_path(path):
-    """验证路径是否存在且为目录"""
-    return path and os.path.isdir(path)
-
-
-def check_asar_existence(path):
-    """检查指定路径下是否存在 app.asar 文件"""
-    return os.path.exists(os.path.join(path, "app.asar"))
-
-
-def check_asar_installed():
-    """检查 asar 命令是否已安装"""
-    run_command([get_asar_cmd(), "--version"])
-
-
-def select_directory(title):
-    """弹出文件夹选择对话框"""
-    try:
-        root = tk.Tk()
-        root.withdraw()
-        selected_path = filedialog.askdirectory(title=title)
-        root.destroy()
-        return selected_path if is_valid_path(selected_path) else None
-    except Exception as e:
-        logging.error(f"Failed to select directory: {e}")
-        sys.exit(1)
-
-
-def is_macos():
-    return platform.system() == 'Darwin'
-
-
-def is_windows():
-    return platform.system() == 'Windows'
-
-
-def get_termius_path(beta=False):
-    """获取 Termius 安装路径
-
-    自动检测各平台默认路径，若未找到则弹出对话框让用户选择
-
-    Args:
-        beta: 是否为 Beta 版本
-    """
-    app_name = "Termius Beta" if beta else "Termius"
-    default_paths = {
-        "Windows": lambda: os.path.join(os.getenv("LOCALAPPDATA", ""), "Programs", app_name, "resources"),
-        "Darwin": lambda: f"/Applications/{app_name}.app/Contents/Resources",
-        "Linux": lambda: f"/opt/{app_name}/resources"
-    }
-    system = platform.system()
-    path_generator = default_paths.get(system)
-
-    if path_generator:
-        termius_path = path_generator()
-    else:
-        logging.error(f"Unsupported operating system: {system}")
-        sys.exit(1)
-
-    # 验证路径有效性，无效则让用户手动选择
-    if not check_asar_existence(termius_path):
-        logging.warning(f"app.asar not found at default location: {termius_path}")
-        logging.info("Please select the Termius installation directory manually.")
-        termius_path = select_directory("Select Termius directory containing app.asar")
-        if not termius_path or not check_asar_existence(termius_path):
-            logging.error("Valid app.asar file not found. Exiting.")
-            sys.exit(1)
-
-    return termius_path
 
 
 def main():

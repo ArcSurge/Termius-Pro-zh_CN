@@ -195,7 +195,7 @@ class TermiusModifier:
         try:
             # 清理已存在的解包目录
             if os.path.exists(self._unpack_dir):
-                shutil.rmtree(self._unpack_dir)
+                safe_rmtree(self._unpack_dir)
                 logging.debug(f"Removed existing unpack directory: {self._unpack_dir}")
 
             # 仅复制 JS、JSON、CSS 文件，排除 node_modules
@@ -473,7 +473,7 @@ def run_command(cmd, shell=False):
     except subprocess.CalledProcessError as e:
         logging.error(f"Command failed with exit code {e.returncode}: {' '.join(cmd) if isinstance(cmd, list) else cmd}")
         sys.exit(1)
-    except FileNotFoundError as e:
+    except FileNotFoundError:
         logging.error(f"Command not found: {cmd}")
         sys.exit(1)
     except Exception as e:

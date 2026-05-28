@@ -36,6 +36,8 @@ jobs:
     steps:
       - name: Checkout source code from repository
         uses: actions/checkout@v5
+        with:
+          ref: beta
       - name: Extract Termius Beta package version
         id: extract_version
         run: |

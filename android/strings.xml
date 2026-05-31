@@ -411,6 +411,7 @@
   <string name="connection_log_message_platform_authenticator_returned_unsupported_format">平台认证器返回不支持的格式</string>
   <string name="connection_log_message_requesting_fido2_user_presence">请求 FIDO2 用户存在</string>
   <string name="connection_status">连接状态</string>
+  <string name="connection_troubleshooting_page_url">https://docs.termius.com/help-center/troubleshooting/i-cant-connect-to-a-host</string>
   <string name="connection_type">连接类型</string>
   <string name="connection_type_mosh_hint">mosh user@hostname -p 21</string>
   <string name="connection_type_snippet_variables_restricted_title">代码片段无法执行</string>
@@ -562,38 +563,18 @@
   <string name="detach_key">分离密钥</string>
   <string name="details_hint">详情（可选）</string>
   <string name="determining_connection_type">选择连接类型</string>
-  <string name="dialog_additional_message_request_identity">或创建新身份</string>
   <string name="dialog_changing_password_message">请稍等，密码更改即将完成</string>
   <string name="dialog_changing_password_title">更改密码</string>
-  <string name="dialog_duplication_ssh_key_message">抱歉，似乎该名称已被使用。你是否真的希望创建同名的 SSH 密钥？</string>
-  <string name="dialog_duplication_ssh_key_title">重复的 SSH 密钥</string>
-  <string name="dialog_merge_issue_pfrule">pf 规则与 %1$s 主机、%2$d 本地端口和 %3$d 远程端口</string>
-  <string name="dialog_merge_issue_ssh_config">与 %1$s 主机相关的 ssh 配置</string>
-  <string name="dialog_merge_issue_ssh_config_group">与 %1$s 组相关的 ssh 配置</string>
-  <string name="dialog_merge_issue_ssh_config_not_related">不与任何主机关联的 ssh 配置</string>
-  <string name="dialog_merge_issue_tag_host">包含主机 %1$s 和标签 %2$s 的捆绑包</string>
-  <string name="dialog_merge_issue_telnet_config">与 %1$s 主机相关的 telnet 配置</string>
-  <string name="dialog_merge_issue_telnet_config_group">与 %1$s 组相关的 telnet 配置</string>
-  <string name="dialog_merge_issue_telnet_config_not_related">不与任何主机关联的 telnet 配置</string>
   <string name="dialog_message_delete_group">此过程将删除所选组及其下的所有主机。确定吗？</string>
   <string name="dialog_message_delete_group_and_host">此过程将删除所选数据，包括主机、组及这些组内的主机。</string>
   <string name="dialog_message_delete_snippets">此过程将删除所选代码片段。</string>
-  <string name="dialog_message_export_key">请批准将 SSH 密钥导出到文件。</string>
-  <string name="dialog_message_merge_issue">我们无法正确合并服务器上的部分数据。&lt;br&gt; &lt;br&gt; 问题集是 &lt;b&gt;%1$s&lt;/b&gt;。&lt;br&gt; 问题对象是 &lt;b&gt;%2$s&lt;/b&gt;。&lt;br&gt; &lt;br&gt; 我们可以通过清理并从服务器下载数据自动解决此问题，但这种方式可能会泄露未发送的数据。&lt;br&gt; &lt;br&gt; 你希望以自动模式还是手动模式解决合并冲突？</string>
-  <string name="dialog_message_request_identity">请选择已保存的身份或创建新的</string>
   <string name="dialog_negative_export_key">取消</string>
   <string name="dialog_positive_export_key">导出</string>
-  <string name="dialog_positive_merge_issue">是的，自动合并</string>
-  <string name="dialog_request_identity_choose_identity">选择身份</string>
-  <string name="dialog_request_identity_is_save">保存身份</string>
-  <string name="dialog_request_identity_toast">请选择已保存的身份或创建新的</string>
   <string name="dialog_title_delete_group">删除组</string>
   <string name="dialog_title_delete_group_and_host">删除所选数据？</string>
   <string name="dialog_title_delete_snippets">删除所选代码片段？</string>
   <string name="dialog_title_export_key">导出到文件</string>
   <string name="dialog_title_log">连接日志</string>
-  <string name="dialog_title_merge_issue">合并问题</string>
-  <string name="dialog_title_request_identity">请求身份</string>
   <string name="did_not_get_email_contact_us">未收到邮件？联系我们</string>
   <string name="did_not_get_email_contact_us_part1">联系我们</string>
   <string name="disable_logs">禁用日志</string>
@@ -957,7 +938,9 @@
   <string name="google_app_id">1:320401657078:android:0ec65118a9cf03c1</string>
   <string name="google_crash_reporting_api_key">AIzaSyDwmrUqDja3uFh_mHtzL1XMLRD7YuCxGB0</string>
   <string name="google_play_link">https://play.google.com/store/apps/details?id=com.server.auditor.ssh.client</string>
+  <string name="google_play_services_unavailable_error_message">Google Play 服务不可用</string>
   <string name="google_search_link">https://www.google.com/search?q=%1$s</string>
+  <string name="google_sign_in_is_temporarily_unavailable_please_try_again_later">Google 登录暂时不可用，请稍后再试。</string>
   <string name="google_storage_bucket">termius-dev-49478.appspot.com</string>
   <string name="got_it">明白了</string>
   <string name="grace_period_screen_description">不用担心。我们会在接下来的几天内再次尝试你的付款。为了保持工作不中断，你可能需要更新付款信息。</string>
@@ -1031,7 +1014,6 @@
   <string name="hint_label">标签</string>
   <string name="hint_local_port">本地端口，例如 22055</string>
   <string name="hint_local_port_number">本地端口</string>
-  <string name="hint_manually_enter">你可以选择“手动输入”来自己输入用户名和密码</string>
   <string name="hint_mosh_command">mosh-server new -s -l LANG=en_US.UTF-8</string>
   <string name="hint_name">名称</string>
   <string name="hint_parent_group_edittext">父组</string>
@@ -1276,8 +1258,6 @@ Termius 不存储密码。如果你忘记了密码，你将丢失数据。这就
   <string name="local_forwarding_title">本地转发</string>
   <string name="local_hosts">本地主机</string>
   <string name="local_path_title">本地路径</string>
-  <string name="local_permissions_dialog_message">你应该授予权限以将文件传输到设备</string>
-  <string name="local_permissions_dialog_positive_button">授予权限</string>
   <string name="local_pf_type">本地</string>
   <string name="local_port_forwarding_description">本地端口转发允许你访问远程服务器的监听端口，就像它是本地的一样。</string>
   <string name="local_storage_picker_choose_different_dir">选择不同目录</string>
@@ -1401,7 +1381,6 @@ Termius 不存储密码。如果你忘记了密码，你将丢失数据。这就
   <string name="manage_log_storage_in_settings">在设置中管理日志存储。</string>
   <string name="manage_subscription_title">管理</string>
   <string name="manage_vaults">管理保管库</string>
-  <string name="manually_enter">手动输入</string>
   <string name="mark_shared_item">%1$s [共享]</string>
   <string name="master_password_hint">密码</string>
   <string name="material_clock_display_divider">:</string>
@@ -1622,9 +1601,9 @@ echo '$1' &gt;&gt; ~/.ssh/authorized_keys</string>
   <string name="network_is_unreachable">无法访问网络</string>
   <string name="new_connection">新建连接</string>
   <string name="new_connection_quick_connect_placeholder">搜索或"ssh user@hostname -p port"</string>
-  <string name="new_connection_variant_serial">串行终端</string>
-  <string name="new_connection_variant_sftp">SFTP</string>
-  <string name="new_connection_variant_terminal">Terminal</string>
+  <string name="new_connection_variant_serial">通过串行连接</string>
+  <string name="new_connection_variant_sftp">通过 SFTP 连接</string>
+  <string name="new_connection_variant_terminal">连接</string>
   <string name="new_crypto_already_migrated_message">看起来新加密功能已在你的账户启用！ &#127881;
 
 你的数据现在由我们新的数据加密算法保护。在此了解新加密的详细信息。
@@ -2968,7 +2947,6 @@ echo '$3' &gt;&gt; "$1/$2";</string>
   <string name="toast_choose_folder">请选择文件夹</string>
   <string name="toast_choose_script">请选择脚本</string>
   <string name="toast_export_failed">导出失败</string>
-  <string name="toast_export_finished">导出完成</string>
   <string name="toast_export_sucsses">公钥导出成功</string>
   <string name="toast_incorrect_code">验证码错误，请重试</string>
   <string name="toast_internet_available">网络不可用，请检查连接后重试</string>
@@ -2993,6 +2971,9 @@ echo '$3' &gt;&gt; "$1/$2";</string>
   <string name="trial_expired">试用期结束</string>
   <string name="trial_extension_promotion_title">美好事物不会永驻</string>
   <string name="trial_successfully_extended">试用期延长成功！ &#127881;</string>
+  <string name="troubleshooting_finish_segment"> 了解有关常见连接问题的更多信息。</string>
+  <string name="troubleshooting_link_segment">文档</string>
+  <string name="troubleshooting_start_segment">请参阅 </string>
   <string name="try_again">重试</string>
   <string name="try_for_free">免费试用</string>
   <string name="two_auth_approve_button_title">已安装 Authy</string>

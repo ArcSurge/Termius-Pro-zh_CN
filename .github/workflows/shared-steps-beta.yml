@@ -36,6 +36,8 @@ jobs:
     steps:
       - name: Checkout source code from repository
         uses: actions/checkout@v5
+        with:
+          ref: beta
       - name: Extract Termius Beta package version
         id: extract_version
         run: |
@@ -150,9 +152,9 @@ jobs:
             for ((i=0; i<${#release}; i++)); do
               char="${release:$i:1}"
               feature=$(get_feature "$char")
-              [ -n "$feature" ] && { args+="$char"; features+="${features:+'-'}$feature"; } || echo "::warning::Ignoring unknown argument: $char" >&2
+              [ -n "$feature" ] && { args+="$char"; features="${features:+$features-}$feature"; } || echo "::warning::Ignoring unknown argument: $char" >&2
             done
-            file="${prefix}${args:+-$features-beta}.asar"
+            file="${prefix}${args:+-$features}-beta.asar"
             python lang.py -"$args" -b && cp "${{ inputs.source_path }}" "$temp_dir/$file" || exit 1
             echo "✓ $file"
           done

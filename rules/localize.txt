@@ -306,9 +306,9 @@ children:"New"|children:"新建"
 "Edit Key"|"编辑密钥"
 "Select Host":"Label"|"选择主机":"标签"
 "Select Host"|"选择主机"
-"Dynamic Rule"|"动态规则"
-"Local Rule"|"本地规则"
-"Remote Rule"|"远程规则"
+case"Dynamic Rule":|case"Dynamic Rule":case"动态规则":
+case"Local Rule":|case"Local Rule":case"本地规则":
+case"Remote Rule":|case"Remote Rule":case"远程规则":
 "Host Chaining"|"主机链"
 "Edit Chain"|"编辑链"
 "Bell sound"|"铃声"

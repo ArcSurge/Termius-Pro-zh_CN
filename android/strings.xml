@@ -70,6 +70,7 @@
   <string name="add_another_team_member_email_btn_label">+ 添加其他邮箱</string>
   <string name="add_another_team_member_email_btn_label_alt">+ 添加其他</string>
   <string name="add_certificate_title">添加证书</string>
+  <string name="add_custom_key_title">添加自定义按键</string>
   <string name="add_data_to_team_account">向团队账户添加数据</string>
   <string name="add_env_variable">+ 添加环境变量</string>
   <string name="add_host">添加主机</string>
@@ -84,6 +85,10 @@
   <string name="add_to_keychain">添加到密钥链</string>
   <string name="add_to_snippets">添加到代码片段</string>
   <string name="add_vault">添加保管库</string>
+  <string name="additional_keys_add_custom">添加快捷方式</string>
+  <string name="additional_keys_compose_new_shortcut">新建快捷方式</string>
+  <string name="additional_keys_customize">自定义</string>
+  <string name="additional_keys_paste_password">粘贴密码</string>
   <string name="ai_action_description">例如：监控磁盘使用情况</string>
   <string name="ai_assistant_welcome_message">使用AI将文本转换为命令</string>
   <string name="ai_dialog_request_button_ratio">1:1</string>
@@ -136,7 +141,7 @@
   <string name="authy_token_hint">令牌</string>
   <string name="autofill">自动填充</string>
   <string name="avo_env">PROD</string>
-  <string name="aws_credentials_title">输入 AWS 凭据</string>
+  <string name="aws_credentials_title">输入 AWS 凭证</string>
   <string name="aws_imported_many_hosts">%1$s 个 AWS 主机已导入并添加到“主机”</string>
   <string name="aws_imported_one_host">1 个 AWS 主机已导入并添加到“主机”</string>
   <string name="aws_network_error">网络不可达，请稍后重试。</string>
@@ -147,7 +152,7 @@
   <string name="back_to_plans">返回计划</string>
   <string name="back_up_and_sync_biometric_keys">生物识别密钥</string>
   <string name="back_up_and_sync_biometric_keys_description">生物识别密钥无法跨设备同步，因为它是设备硬件的一部分。</string>
-  <string name="back_up_and_sync_credentials_description">选择是否同步凭据。</string>
+  <string name="back_up_and_sync_credentials_description">选择是否同步凭证。</string>
   <string name="back_up_and_sync_data_entities_description">以下数据始终处于同步状态。</string>
   <string name="back_up_and_sync_desktop_promo_congratulation_description">恭喜！你的数据现在已加密并备份到 Termius 安全云保管库 🛡️</string>
   <string name="back_up_and_sync_desktop_promo_description">你的数据现在已加密并备份到 Termius 安全云保管库 🛡️</string>
@@ -258,7 +263,7 @@
   <string name="choose_best_paid_plan_or_switch_to_free_starter_plan">选择最佳付费计划或切换到免费的入门计划。</string>
   <string name="choose_charset_text_view">字符集</string>
   <string name="choose_color_scheme_fragment">选择颜色方案</string>
-  <string name="choose_credentials_mode">选择凭据模式</string>
+  <string name="choose_credentials_mode">选择凭证模式</string>
   <string name="choose_destination">选择目标</string>
   <string name="choose_font_size_title">选择字体大小</string>
   <string name="choose_host">选择主机</string>
@@ -411,7 +416,6 @@
   <string name="connection_log_message_platform_authenticator_returned_unsupported_format">平台认证器返回不支持的格式</string>
   <string name="connection_log_message_requesting_fido2_user_presence">请求 FIDO2 用户存在</string>
   <string name="connection_status">连接状态</string>
-  <string name="connection_troubleshooting_page_url">https://docs.termius.com/help-center/troubleshooting/i-cant-connect-to-a-host</string>
   <string name="connection_type">连接类型</string>
   <string name="connection_type_mosh_hint">mosh user@hostname -p 21</string>
   <string name="connection_type_snippet_variables_restricted_title">代码片段无法执行</string>
@@ -498,7 +502,7 @@
   <string name="create_team_promo_screen_oops_error_hint">看起来你的请求出错。请重试。</string>
   <string name="create_team_promo_screen_oops_error_title">哎呀 &#129335;‍♀️️</string>
   <string name="create_team_promo_screen_send_invites_button">发送邀请</string>
-  <string name="create_termius_id_explanation">在加密的云保管库中备份你的连接和凭据，并在所有设备上访问它们</string>
+  <string name="create_termius_id_explanation">在加密的云保管库中备份你的连接和凭证，并在所有设备上访问它们</string>
   <string name="credentials_sharing_link_learn_more_multikey">https://termi.us/multikey-buy</string>
   <string name="current">当前</string>
   <string name="current_connections_1d">终端: %1$d</string>
@@ -508,6 +512,14 @@
   <string name="current_keys">当前密钥</string>
   <string name="current_port_forwardings_1d">端口转发规则: %1$d</string>
   <string name="current_sftp_session_1d">SFTP: %1$d</string>
+  <string name="custom_key_command_hint">使用 \x## 表示控制码 (\x02=Ctrl+B, \x1b=ESC)</string>
+  <string name="custom_key_command_label">命令 / 序列</string>
+  <string name="custom_key_command_placeholder">e.g., \x02c 或 ls -la\n</string>
+  <string name="custom_key_display_name_label">显示名称</string>
+  <string name="custom_key_display_name_placeholder">e.g., tmux new</string>
+  <string name="custom_key_subtitle">选择以下组合键来创建快捷方式。</string>
+  <string name="custom_key_title">自定义按键</string>
+  <string name="customize_keyboard_terminal_button">自定义键盘</string>
   <string name="d_selected">%1$d 已选择</string>
   <string name="dark_theme_name">深色主题</string>
   <string name="data_bits_eight">\8</string>
@@ -563,18 +575,38 @@
   <string name="detach_key">分离密钥</string>
   <string name="details_hint">详情（可选）</string>
   <string name="determining_connection_type">选择连接类型</string>
+  <string name="dialog_additional_message_request_identity">或创建新身份</string>
   <string name="dialog_changing_password_message">请稍等，密码更改即将完成</string>
   <string name="dialog_changing_password_title">更改密码</string>
+  <string name="dialog_duplication_ssh_key_message">抱歉，似乎该名称已被使用。你是否真的希望创建同名的 SSH 密钥？</string>
+  <string name="dialog_duplication_ssh_key_title">重复的 SSH 密钥</string>
+  <string name="dialog_merge_issue_pfrule">pf 规则与 %1$s 主机、%2$d 本地端口和 %3$d 远程端口</string>
+  <string name="dialog_merge_issue_ssh_config">与 %1$s 主机相关的 ssh 配置</string>
+  <string name="dialog_merge_issue_ssh_config_group">与 %1$s 组相关的 ssh 配置</string>
+  <string name="dialog_merge_issue_ssh_config_not_related">不与任何主机关联的 ssh 配置</string>
+  <string name="dialog_merge_issue_tag_host">包含主机 %1$s 和标签 %2$s 的捆绑包</string>
+  <string name="dialog_merge_issue_telnet_config">与 %1$s 主机相关的 telnet 配置</string>
+  <string name="dialog_merge_issue_telnet_config_group">与 %1$s 组相关的 telnet 配置</string>
+  <string name="dialog_merge_issue_telnet_config_not_related">不与任何主机关联的 telnet 配置</string>
   <string name="dialog_message_delete_group">此过程将删除所选组及其下的所有主机。确定吗？</string>
   <string name="dialog_message_delete_group_and_host">此过程将删除所选数据，包括主机、组及这些组内的主机。</string>
   <string name="dialog_message_delete_snippets">此过程将删除所选代码片段。</string>
+  <string name="dialog_message_export_key">请批准将 SSH 密钥导出到文件。</string>
+  <string name="dialog_message_merge_issue">我们无法正确合并服务器上的部分数据。&lt;br&gt; &lt;br&gt; 问题集是 &lt;b&gt;%1$s&lt;/b&gt;。&lt;br&gt; 问题对象是 &lt;b&gt;%2$s&lt;/b&gt;。&lt;br&gt; &lt;br&gt; 我们可以通过清理并从服务器下载数据自动解决此问题，但这种方式可能会泄露未发送的数据。&lt;br&gt; &lt;br&gt; 你希望以自动模式还是手动模式解决合并冲突？</string>
+  <string name="dialog_message_request_identity">请选择已保存的身份或创建新的</string>
   <string name="dialog_negative_export_key">取消</string>
   <string name="dialog_positive_export_key">导出</string>
+  <string name="dialog_positive_merge_issue">是的，自动合并</string>
+  <string name="dialog_request_identity_choose_identity">选择身份</string>
+  <string name="dialog_request_identity_is_save">保存身份</string>
+  <string name="dialog_request_identity_toast">请选择已保存的身份或创建新的</string>
   <string name="dialog_title_delete_group">删除组</string>
   <string name="dialog_title_delete_group_and_host">删除所选数据？</string>
   <string name="dialog_title_delete_snippets">删除所选代码片段？</string>
   <string name="dialog_title_export_key">导出到文件</string>
   <string name="dialog_title_log">连接日志</string>
+  <string name="dialog_title_merge_issue">合并问题</string>
+  <string name="dialog_title_request_identity">请求身份</string>
   <string name="did_not_get_email_contact_us">未收到邮件？联系我们</string>
   <string name="did_not_get_email_contact_us_part1">联系我们</string>
   <string name="disable_logs">禁用日志</string>
@@ -769,6 +801,9 @@
   <string name="errors_history_item">错误</string>
   <string name="exec_command_output">执行命令输出</string>
   <string name="execute_permission">执行</string>
+  <string name="execute_snippet_summary_completed">已完成 %1$d / %2$d</string>
+  <string name="execute_snippet_summary_errors">, %1$d 个错误</string>
+  <string name="execute_snippet_summary_errors_plural">, %1$d 个错误</string>
   <string name="existing_account">已有账户</string>
   <string name="existing_account_dialog_text">此电子邮件地址已关联一个账户。请使用密码登录。</string>
   <string name="exo_controls_cc_disabled_description">启用字幕</string>
@@ -895,7 +930,7 @@
   <string name="font_size_seek_bar_max">\72</string>
   <string name="font_size_seek_bar_min">\2</string>
   <string name="force_two_factor_auth_successfully_configured">双重验证已成功配置</string>
-  <string name="forget_aws_credentials">忘记 AWS 凭据</string>
+  <string name="forget_aws_credentials">忘记 AWS 凭证</string>
   <string name="forgot_password">忘记密码？</string>
   <string name="forward_sftp">转发</string>
   <string name="fragment_licenses_retrofit">Retrofit</string>
@@ -927,6 +962,11 @@
   <string name="gesture_promote_text">要通过手势模拟方向键、Page Up/Dn、Home 和 End，请点击此按钮。阅读更多</string>
   <string name="gesture_promote_text_clickable">阅读更多</string>
   <string name="gesture_promote_title">引入新的终端行为！</string>
+  <string name="gesture_toast_end">End</string>
+  <string name="gesture_toast_home">Home</string>
+  <string name="gesture_toast_page_down">Page Down</string>
+  <string name="gesture_toast_page_up">Page Up</string>
+  <string name="gesture_toast_tab">Tab</string>
   <string name="get_data_failed">获取数据失败</string>
   <string name="get_more_from_termius">从 Termius 获取更多功能</string>
   <string name="get_started">开始使用</string>
@@ -938,9 +978,7 @@
   <string name="google_app_id">1:320401657078:android:0ec65118a9cf03c1</string>
   <string name="google_crash_reporting_api_key">AIzaSyDwmrUqDja3uFh_mHtzL1XMLRD7YuCxGB0</string>
   <string name="google_play_link">https://play.google.com/store/apps/details?id=com.server.auditor.ssh.client</string>
-  <string name="google_play_services_unavailable_error_message">Google Play 服务不可用</string>
   <string name="google_search_link">https://www.google.com/search?q=%1$s</string>
-  <string name="google_sign_in_is_temporarily_unavailable_please_try_again_later">Google 登录暂时不可用，请稍后再试。</string>
   <string name="google_storage_bucket">termius-dev-49478.appspot.com</string>
   <string name="got_it">明白了</string>
   <string name="grace_period_screen_description">不用担心。我们会在接下来的几天内再次尝试你的付款。为了保持工作不中断，你可能需要更新付款信息。</string>
@@ -1014,6 +1052,7 @@
   <string name="hint_label">标签</string>
   <string name="hint_local_port">本地端口，例如 22055</string>
   <string name="hint_local_port_number">本地端口</string>
+  <string name="hint_manually_enter">你可以选择“手动输入”来自己输入用户名和密码</string>
   <string name="hint_mosh_command">mosh-server new -s -l LANG=en_US.UTF-8</string>
   <string name="hint_name">名称</string>
   <string name="hint_parent_group_edittext">父组</string>
@@ -1170,8 +1209,8 @@ Termius 不存储密码。如果你忘记了密码，你将丢失数据。这就
   <string name="invite_your_team_members_to_the_team_vault">邀请你的团队成员加入团队保管库。</string>
   <string name="inviting">正在邀请</string>
   <string name="item_view_role_description">标签页</string>
-  <string name="keep_aws_credentials_ec2">保留凭据（也用于 SFTP）</string>
-  <string name="keep_aws_credentials_sftp_picker">保留凭据（也用于 EC2）</string>
+  <string name="keep_aws_credentials_ec2">保留凭证（也用于 SFTP）</string>
+  <string name="keep_aws_credentials_sftp_picker">保留凭证（也用于 EC2）</string>
   <string name="keep_biometric_keys_logout_text">退出登录</string>
   <string name="keep_biometric_keys_note">这些密钥无法从 Android 密钥库中提取，并且不能同步到你的账户。如果你删除了这些密钥，则无法恢复。
 
@@ -1258,6 +1297,8 @@ Termius 不存储密码。如果你忘记了密码，你将丢失数据。这就
   <string name="local_forwarding_title">本地转发</string>
   <string name="local_hosts">本地主机</string>
   <string name="local_path_title">本地路径</string>
+  <string name="local_permissions_dialog_message">你应该授予权限以将文件传输到设备</string>
+  <string name="local_permissions_dialog_positive_button">授予权限</string>
   <string name="local_pf_type">本地</string>
   <string name="local_port_forwarding_description">本地端口转发允许你访问远程服务器的监听端口，就像它是本地的一样。</string>
   <string name="local_storage_picker_choose_different_dir">选择不同目录</string>
@@ -1270,7 +1311,7 @@ Termius 不存储密码。如果你忘记了密码，你将丢失数据。这就
   <string name="lock_pattern_error_toast">抱歉，你已尝试使用错误的图案解锁5次。
 请稍后再试。</string>
   <string name="log_in">登录</string>
-  <string name="log_in_to_termius_to_unlock_your_encrypted_cloud_vault">登录到Termius以解锁你的加密云保管库</string>
+  <string name="log_in_to_termius_to_unlock_your_encrypted_cloud_vault">登录到 Termius 以解锁你的加密云保管库</string>
   <string name="log_in_upper">登录</string>
   <string name="logging_out_will_erase_your_local_data_warning">登出将会擦除你的本地数据，所有未同步到你的云保管库的信息将会丢失。</string>
   <string name="login">登录</string>
@@ -1279,7 +1320,7 @@ Termius 不存储密码。如果你忘记了密码，你将丢失数据。这就
   <string name="login_screen">登录</string>
   <string name="logout_and_erase_local_data">登出并擦除本地数据</string>
   <string name="logout_btn">登出</string>
-  <string name="logout_confirmation_description">登出将会从该设备擦除你的Termius数据，任何未同步的数据将会丢失。重新登录以恢复访问。</string>
+  <string name="logout_confirmation_description">登出将会从该设备擦除你的 Termius 数据，任何未同步的数据将会丢失。重新登录以恢复访问。</string>
   <string name="logs_are_disabled_for_selected_vaults">所选保管库的日志已禁用</string>
   <string name="logs_storage_oversized_unsynced_logs_promo_description">更改日志保留策略或创建一个账户以在云保管库中存储日志。</string>
   <string name="logs_storage_screen_title">日志存储</string>
@@ -1378,9 +1419,13 @@ Termius 不存储密码。如果你忘记了密码，你将丢失数据。这就
   <string name="m3c_wide_navigation_rail_pane_title">导航轨道</string>
   <string name="mailto_prefix">mailto:</string>
   <string name="manage">管理</string>
+  <string name="manage_keys_delete_zone">拖放到此处删除.</string>
+  <string name="manage_keys_dialog_title">默认预设</string>
+  <string name="manage_keys_reset">恢复默认</string>
   <string name="manage_log_storage_in_settings">在设置中管理日志存储。</string>
   <string name="manage_subscription_title">管理</string>
   <string name="manage_vaults">管理保管库</string>
+  <string name="manually_enter">手动输入</string>
   <string name="mark_shared_item">%1$s [共享]</string>
   <string name="master_password_hint">密码</string>
   <string name="material_clock_display_divider">:</string>
@@ -1601,9 +1646,9 @@ echo '$1' &gt;&gt; ~/.ssh/authorized_keys</string>
   <string name="network_is_unreachable">无法访问网络</string>
   <string name="new_connection">新建连接</string>
   <string name="new_connection_quick_connect_placeholder">搜索或"ssh user@hostname -p port"</string>
-  <string name="new_connection_variant_serial">通过串行连接</string>
-  <string name="new_connection_variant_sftp">通过 SFTP 连接</string>
-  <string name="new_connection_variant_terminal">连接</string>
+  <string name="new_connection_variant_serial">串行终端</string>
+  <string name="new_connection_variant_sftp">SFTP</string>
+  <string name="new_connection_variant_terminal">Terminal</string>
   <string name="new_crypto_already_migrated_message">看起来新加密功能已在你的账户启用！ &#127881;
 
 你的数据现在由我们新的数据加密算法保护。在此了解新加密的详细信息。
@@ -1611,21 +1656,21 @@ echo '$1' &gt;&gt; ~/.ssh/authorized_keys</string>
 无需进一步操作。</string>
   <string name="new_crypto_already_migrated_message_here_highlight">在此</string>
   <string name="new_crypto_already_migrated_title">已启用</string>
-  <string name="new_crypto_before_proceed_common_message">启用新加密后，将需要最新版Termius。</string>
+  <string name="new_crypto_before_proceed_common_message">启用新加密后，将需要最新版 Termius。</string>
   <string name="new_crypto_before_proceed_i_will_update">我会更新</string>
-  <string name="new_crypto_before_proceed_message_1">启用新加密后，将需要最新版Termius。</string>
+  <string name="new_crypto_before_proceed_message_1">启用新加密后，将需要最新版 Termius。</string>
   <string name="new_crypto_before_proceed_message_2_2_all_team_members">你团队的所有成员</string>
   <string name="new_crypto_before_proceed_message_2_2_you">你</string>
-  <string name="new_crypto_before_proceed_message_member_subtitle">请确保团队所有成员更新Termius应用至最新版本：</string>
+  <string name="new_crypto_before_proceed_message_member_subtitle">请确保团队所有成员更新 Termius 应用至最新版本：</string>
   <string name="new_crypto_before_proceed_message_team_owner_all_devices">所有设备上：</string>
-  <string name="new_crypto_before_proceed_message_team_owner_subtitle">请确保在所有设备上将Termius应用更新至最新版本：</string>
+  <string name="new_crypto_before_proceed_message_team_owner_subtitle">请确保在所有设备上将 Termius 应用更新至最新版本：</string>
   <string name="new_crypto_before_proceed_title">操作前须知</string>
   <string name="new_crypto_checking_setup_title">检查你的设置</string>
   <string name="new_crypto_do_it_later_button">稍后处理</string>
   <string name="new_crypto_done_button">完成</string>
   <string name="new_crypto_done_text">恭喜！ &#127881; 你的数据现在由我们新的数据加密算法保护。在此了解新加密的详细信息。
 
-请确保在所有设备上将Termius更新至最新版本。</string>
+请确保在所有设备上将 Termius 更新至最新版本。</string>
   <string name="new_crypto_done_text_1">在此</string>
   <string name="new_crypto_done_title">迁移成功！</string>
   <string name="new_crypto_enable_button">启用新加密</string>
@@ -1696,6 +1741,15 @@ echo '$1' &gt;&gt; ~/.ssh/authorized_keys</string>
   <string name="new_ssh_key_title">新建 SSH 密钥</string>
   <string name="new_tag">新建标签名</string>
   <string name="new_terminal_connection">新连接</string>
+  <string name="new_terminal_ux_choose_hotkeys_subtitle">根据你的操作场景选择合适的快捷键方案。</string>
+  <string name="new_terminal_ux_choose_hotkeys_title">选择基础或 AI 快捷键</string>
+  <string name="new_terminal_ux_customize_subtitle">长按并拖动可重新排列快捷键，便于快速访问。</string>
+  <string name="new_terminal_ux_customize_title">自定义快捷面板</string>
+  <string name="new_terminal_ux_double_tap_subtitle">双击空白区域可在终端中使用 Tab 键。</string>
+  <string name="new_terminal_ux_double_tap_title">双击以使用 Tab 键</string>
+  <string name="new_terminal_ux_guide_title">快速指南</string>
+  <string name="new_terminal_ux_long_press_and_drag_subtitle">长按并拖动，编辑时可调出历史命令或移动光标。</string>
+  <string name="new_terminal_ux_long_press_and_drag_title">长按拖动唤出方向键</string>
   <string name="new_variable">新建变量</string>
   <string name="new_vault_label">新建保管库</string>
   <string name="next">下一步</string>
@@ -1889,6 +1943,8 @@ echo '$1' &gt;&gt; ~/.ssh/authorized_keys</string>
   <string name="prepare_public_key_dialog_error_not_valid">密码短语无效</string>
   <string name="prepare_public_key_dialog_message_in_progress">正在验证</string>
   <string name="prepare_public_key_dialog_title">准备公钥</string>
+  <string name="preset_ai_coding">AI 编程</string>
+  <string name="preset_basic">基础</string>
   <string name="preview_mode">预览模式</string>
   <string name="preview_mode_image_title">预览模式：</string>
   <string name="price_label">价格</string>
@@ -2035,6 +2091,9 @@ echo '$1' &gt;&gt; ~/.ssh/authorized_keys</string>
   <string name="reset_encryption_password_description_highlight">永久删除</string>
   <string name="reset_encryption_password_get_instructions_button">获取说明</string>
   <string name="reset_encryption_password_title">重置密码</string>
+  <string name="reset_to_default_confirmation_message">所有自定义快捷键和排序将丢失，且无法撤销。</string>
+  <string name="reset_to_default_confirmation_title">恢复默认设置？</string>
+  <string name="reset_to_default_from_preset">恢复默认设置</string>
   <string name="restoreSubs">恢复</string>
   <string name="restore_previous_selection_count_host">恢复之前的选择 (%1$d 主机)</string>
   <string name="restore_selection">恢复选择</string>
@@ -2085,6 +2144,7 @@ Unless required by applicable law or agreed to in writing, software distributed 
   <string name="save_menu_item">保存</string>
   <string name="save_passphrase_checkbox">保存密码短语</string>
   <string name="save_password">保存密码</string>
+  <string name="save_snippet">保存代码片段</string>
   <string name="save_username">保存用户名</string>
   <string name="save_your_top3_commands">保存最常用的 3 个命令 &#128640;</string>
   <string name="saving_error_title">保存错误</string>
@@ -2205,6 +2265,8 @@ echo '$3' &gt;&gt; "$1/$2";</string>
   <string name="settings_create_account_title">创建账户</string>
   <string name="settings_cursor_speed_title">光标速度</string>
   <string name="settings_detect_os_title">检测操作系统</string>
+  <string name="settings_disable_keyboard_suggestions_summary">如果键盘建议干扰输入，可以禁用它们</string>
+  <string name="settings_disable_keyboard_suggestions_title">禁用键盘建议</string>
   <string name="settings_empty_field_validation">空字段</string>
   <string name="settings_emulation_type_title">终端类型</string>
   <string name="settings_extract_private_sftp_data_title">查看私人数据</string>
@@ -2234,6 +2296,7 @@ echo '$3' &gt;&gt; "$1/$2";</string>
   <string name="settings_key_cursor_speed">swipe_timer_serverauditor</string>
   <string name="settings_key_debug_panel">debug_panel_key</string>
   <string name="settings_key_detect_os">host_os_permission</string>
+  <string name="settings_key_disable_keyboard_suggestions">disable_keyboard_suggestions</string>
   <string name="settings_key_dns_sd">dns_sd_services</string>
   <string name="settings_key_emulation_type">emulationkey</string>
   <string name="settings_key_enable_ac_for_new_connection">enable_ac_for_new_connection</string>
@@ -2252,7 +2315,6 @@ echo '$3' &gt;&gt; "$1/$2";</string>
   <string name="settings_key_logout">logout_settings</string>
   <string name="settings_key_logs_storage_screen">settings_key_logs_storage_screen</string>
   <string name="settings_key_logs_storage_screen_title">日志存储</string>
-  <string name="settings_key_normal_input_type_in_terminal">use_normal_input_type_in_terminal</string>
   <string name="settings_key_notication_category">notification_cateogry</string>
   <string name="settings_key_notification">notification</string>
   <string name="settings_key_parse_history">parse_history_permission</string>
@@ -2271,6 +2333,7 @@ echo '$3' &gt;&gt; "$1/$2";</string>
   <string name="settings_key_shake_action">shake_action</string>
   <string name="settings_key_shake_category">shake_category</string>
   <string name="settings_key_show_notifications_dialog">show_notifications_dialog</string>
+  <string name="settings_key_show_shortcut_bar">show_shortcut_bar</string>
   <string name="settings_key_sync_identities">use_sync_keys_and_passwords</string>
   <string name="settings_key_team_online">team_online_settings</string>
   <string name="settings_key_terminal_style">terminal_style_setting</string>
@@ -2284,8 +2347,6 @@ echo '$3' &gt;&gt; "$1/$2";</string>
   <string name="settings_login_title">登录</string>
   <string name="settings_logout_title">退出登录</string>
   <string name="settings_never">永不</string>
-  <string name="settings_normal_input_type_in_terminal_summary">支持语音输入及中日韩语言（CJK）</string>
-  <string name="settings_normal_input_type_in_terminal_title">键盘支持（实验功能）</string>
   <string name="settings_notification_category_title">通知</string>
   <string name="settings_notification_icon_summary">自定义或禁用活动连接显示</string>
   <string name="settings_notification_icon_summary_allow">后台显示活动连接所需的权限</string>
@@ -2312,6 +2373,7 @@ echo '$3' &gt;&gt; "$1/$2";</string>
   <string name="settings_shake_sens_title">摇动灵敏度</string>
   <string name="settings_shake_summary">摇动绑定功能</string>
   <string name="settings_shake_tilte">摇动设备</string>
+  <string name="settings_show_shortcut_bar_title">显示快捷方式栏</string>
   <string name="settings_ssh_agent_title">SSH 代理转发</string>
   <string name="settings_summary_default">%s</string>
   <string name="settings_summary_format_lines">%s 行</string>
@@ -2545,9 +2607,17 @@ echo '$3' &gt;&gt; "$1/$2";</string>
   <string name="snippet_package_team_scope_label">团队包</string>
   <string name="snippet_packages">代码片段包</string>
   <string name="snippet_pasted">代码片段粘贴成功</string>
+  <string name="snippet_status_completed">已完成</string>
+  <string name="snippet_status_connecting">连接中…</string>
   <string name="snippet_status_connection_refused">连接被拒绝</string>
+  <string name="snippet_status_disconnected">已断开连接</string>
+  <string name="snippet_status_error">错误</string>
+  <string name="snippet_status_error_with_code">错误 (退出 %d)</string>
   <string name="snippet_status_exit_code">退出代码：%d</string>
+  <string name="snippet_status_running">运行中…</string>
   <string name="snippet_status_running_snippet">正在运行代码片段</string>
+  <string name="snippet_variable_setup_back_content_description">返回</string>
+  <string name="snippet_variable_setup_dismiss_content_description">关闭</string>
   <string name="snippet_variable_setup_title">填写代码片段变量</string>
   <string name="snippets_context_clear_selection">清除选择</string>
   <string name="snippets_context_select_all">全选</string>
@@ -2769,6 +2839,8 @@ echo '$3' &gt;&gt; "$1/$2";</string>
   <string name="synced_at">同步于 %s</string>
   <string name="system_theme_name">跟随系统主题</string>
   <string name="tab">标签页</string>
+  <string name="tab_side_panel_hide_content_description">隐藏侧边栏</string>
+  <string name="tab_side_panel_show_content_description">显示侧边栏</string>
   <string name="tabs_feature">终端标签页</string>
   <string name="tabs_feature_desc">轻松切换终端会话</string>
   <string name="tabs_feature_desc_child">同时处理多个会话。标签页功能完全适配触控屏，显著提升终端工作效率</string>
@@ -2810,6 +2882,13 @@ echo '$3' &gt;&gt; "$1/$2";</string>
   <string name="template_percent">%1$d 百分比。</string>
   <string name="temporarily_locked">暂时锁定</string>
   <string name="temporarily_locked_message">由于多次登录失败，你的账户已被暂时锁定。请等待5分钟后重试。</string>
+  <string name="terminal_bell_notification_text">%s 触发了响铃</string>
+  <string name="terminal_bell_notification_title">终端响铃</string>
+  <string name="terminal_empty_state_no_active_sessions">暂无活动会话</string>
+  <string name="terminal_keyboard_preset_default">默认</string>
+  <string name="terminal_password_pasted">已将密码粘贴到终端</string>
+  <string name="terminal_port_forwarding_placeholder_subtitle">视口暂不支持端口转发会话。</string>
+  <string name="terminal_port_forwarding_placeholder_title">端口转发 %1$s</string>
   <string name="terminal_preview_text">RM(1) User Commands RM(1)
 
     NAME
@@ -2861,6 +2940,10 @@ echo '$3' &gt;&gt; "$1/$2";</string>
     erable, consider using shred.
 </string>
   <string name="terminal_preview_title">终端预览</string>
+  <string name="terminal_theme_font_size_decrease_content_description">减小字体大小</string>
+  <string name="terminal_theme_font_size_increase_content_description">增大字体大小</string>
+  <string name="terminal_themes_font">字体</string>
+  <string name="terminal_themes_font_size">文本大小</string>
   <string name="terminals_empty_hint">活动终端会话将在此显示。
 输入命令以开始</string>
   <string name="terminals_empty_title">无活动连接</string>
@@ -2947,6 +3030,7 @@ echo '$3' &gt;&gt; "$1/$2";</string>
   <string name="toast_choose_folder">请选择文件夹</string>
   <string name="toast_choose_script">请选择脚本</string>
   <string name="toast_export_failed">导出失败</string>
+  <string name="toast_export_finished">导出已完成</string>
   <string name="toast_export_sucsses">公钥导出成功</string>
   <string name="toast_incorrect_code">验证码错误，请重试</string>
   <string name="toast_internet_available">网络不可用，请检查连接后重试</string>
@@ -2955,6 +3039,7 @@ echo '$3' &gt;&gt; "$1/$2";</string>
   <string name="toast_select_host">请选择主机</string>
   <string name="toast_session_has_no_saved_password">当前会话未保存密码</string>
   <string name="toast_ssh_identity_username">用户名不能为空</string>
+  <string name="toast_team_data_access_denied">不允许访问团队凭证</string>
   <string name="toast_this_rule_has_already_existed">规则已存在</string>
   <string name="toast_wireless_connecint_failed">连接失败</string>
   <string name="today_colon">今日：</string>
@@ -2971,9 +3056,6 @@ echo '$3' &gt;&gt; "$1/$2";</string>
   <string name="trial_expired">试用期结束</string>
   <string name="trial_extension_promotion_title">美好事物不会永驻</string>
   <string name="trial_successfully_extended">试用期延长成功！ &#127881;</string>
-  <string name="troubleshooting_finish_segment"> 了解有关常见连接问题的更多信息。</string>
-  <string name="troubleshooting_link_segment">文档</string>
-  <string name="troubleshooting_start_segment">请参阅 </string>
   <string name="try_again">重试</string>
   <string name="try_for_free">免费试用</string>
   <string name="two_auth_approve_button_title">已安装 Authy</string>

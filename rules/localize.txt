@@ -1284,8 +1284,8 @@ teamTrialPlan:"Team"|teamTrialPlan:"团队"
 name:"Team"|name:"团队"
 "Link copied"|"链接已复制"
 "Welcome back to Termius"|"欢迎回到 Termius"
-"Don’t have an account yet?"|"还没有帐户吗?"
-"Create free account"|"创建免费帐户"
+"Don’t have an account yet?"|"还没有账号吗?"
+"Create free account"|"创建免费账号"
 /children:\[([^\[\]}\)]+?),children:`Save up to \${(\w+?)}%`}\)," ","when you opt for the annual subscription\. Get peace of mind",([^\[\]]+?)"of knowing that your subscription is taken care of for an entire year\."\]/|children:["选择年度订阅可"," ",\g<1>,children:`节省高达 ${\g<2>}%`})," ","的费用。订阅全年服务，让你省心无忧。"]
 children:"Monthly"|children:"月度"
 children:"Annual"|children:"年度"
@@ -1303,18 +1303,23 @@ children:"Annual"|children:"年度"
 "No tags found. You can add tags when editing a host."|"找不到标记。编辑主机时可以添加标记。"
 "Logs are disabled for the selected vault"|"所选保管库的日志已禁用"
 "Enable logs for this vault in settings."|"在设置中启用此保管库的日志。"
-"Logs retention policies"|"日志保留策略"
+title:"Dismiss banner"|title:"关闭横幅"
+children:"Log retention"|children:"日志保留"
+"Logs deleted":"Delete existing logs"|"已删除":"删除现有日志"
+"Back Up Logs With Account"|"使用账号备份日志"
+"Keep Logs In Sync With Pro"|"使日志与专业版保持同步"
+"Logs are not available on your current plan."|"日志在你当前的套餐中不可用。"
+text:"Upgrade",actionType:"upgrade",showUpgradeIcon:!0|text:"升级套餐",actionType:"upgrade",showUpgradeIcon:!0
+title:"Logs are not available on your current plan"|title:"日志在你的当前套餐中不可用"
+children:"Upgrade"})," ","to enable logs."|children:"升级套餐"}),"以启用日志。"
 "Control how logs are stored in your vaults."|"控制日志在保管库中的存储方式。"
 "Confirm disabling logs"|"确认禁用日志"
 "Disable Logs"|"禁用日志"
 "Couldn't download session log file"|"无法下载会话日志文件"
 /"Disabling logs will ",([\w$]+?)\("strong",{children:"delete the logs "}\),"from this vault:"/|"禁用日志将从此保管库中",\g<1>("strong",{children:"删除日志"}),"："
-/`You have \${([\w$]+?)\.size}mb of logs stored locally`/|`本地存储了${\g<1>.size}mb的日志`
-"Change log retention policies or create an account to store logs in a cloud vault."|"更改日志保留策略或创建帐户以将日志存储在云保险库中。"
-"Manage log storage in settings."|"在设置中管理日志存储。"
 title:"Logs"|title:"日志"
 /`Couldn't \${(\w+?)\?"enable":"disable"} logs in \${\((\w+?)=(\w+?)\.get\((\w+?)\)\)==null\?void 0:(\w+?)\.name}`/|`无法在${(\g<2>=\g<3>.get(\g<4>))==null?void 0:\g<5>.name}中${\g<1>?"启用":"禁用"}日志`
-"No account"|"无帐户"
+"No account"|"无账号"
 "Loading ideas portal..."|"正在加载创意门户..."
 /className:(\w+?)\.headerTitle,children:(?P<l>\w+?)}\),(?P=l)==="date"/|className:\g<1>.headerTitle,children:\g<l>==="user"?"用户":\g<l>==="host"?"主机":\g<l>==="date"?"日期":\g<l>==="saved"?"已保存":\g<l>}),\g<l>==="date"
 "Add a comment"|"添加评论"
@@ -1450,7 +1455,7 @@ children:"Couldn't create SSH ID"|children:"无法创建 SSH ID"
 children:"Try again"|children:"重试"
 "Creating SSH ID..."|"创建 SSH ID..."
 "Setting up your SSH ID. This may take a few moments."|"正在设置你的 SSH ID，这可能需要一些时间。"
-"This device has been added to your SSH ID"|"该设备已添加至你的 SSH ID 帐户。"
+"This device has been added to your SSH ID"|"该设备已添加至你的 SSH ID 账号。"
 "Your SSH ID is ready!"|"你的 SSH ID 已准备就绪！"
 "Go to your public profile to integrate SSH ID to your servers."|"前往你的公开个人资料页面，将 SSH ID 集成到你的服务器中。"
 /children:\["Go to sshid\.io\/",(\w+?)\]/|children:["前往 sshid.io/",\g<1>]
@@ -1463,14 +1468,11 @@ children:"Try again"|children:"重试"
 "Preserve your biometric keys on this device after logout."|"注销后在此设备上保留你的生物识别密钥。"
 
 "No destination"|"无目的地"
-/`\${\w+?\("this",(?P<e>\w+?)\)} \${\w+?\("folder",(?P=e)\)}`:`\${\w+?\("this",(?P<n>\w+?)\)} \${\w+?\("file",(?P=n)\)}`/|`${\g<e>>1?"这些":"这个"}目录`:`${\g<n>>1?"这些":"这个"}文件`
+/`\${[\w$]+?\("this",(?P<e>\w+?)\)} \${[\w$]+?\("folder",(?P=e)\)}`:`\${[\w$]+?\("this",(?P<n>\w+?)\)} \${[\w$]+?\("file",(?P=n)\)}`/|`${\g<e>>1?"这些":"这个"}目录`:`${\g<n>>1?"这些":"这个"}文件`
 
 "Keep your logs in sync across mobile and desktop with cloud vault."|"通过云保管库让你的日志在移动和桌面设备上保持同步。"
 "Troubleshoot faster with your teammates by accessing shared logs in Team vault."|"通过访问团队保管库中的共享日志，可以与成员更快地排除故障。"
 "Stay audit-ready with a custom log retention policy that fits your compliance requirements."|"通过适合你的合规性要求的自定义日志保留策略，做好审计准备。"
-/`You have \${(\w+?)}mb of logs stored locally\.`/|`你在本地存储了 ${\g<1>}mb 的日志。`
-"Back up your logs with cloud vault and access them on mobile and desktop."|"使用云保管库备份你的日志，并在移动和桌面设备上访问它们。"
-"Set up vault"|"设置保管库"
 "You already have an account"|"你已有账号"
 "Enter the encryption password for "|"输入下面电子邮件密码"
 "Enter encryption password"|"输入密码"
@@ -1547,7 +1549,7 @@ text:"Set PIN code on your FIDO2 device to show here."|text:"在 FIDO2 设备上
 "Generating the key..."|"正在生成密钥..."
 /children:\[" ","for the ",([\w$]+?)\(Typography,{bold:!0,children:([\w$]+?)}\)," connection"\]/|children:[" ","用于 ",\g<1>(Typography,{bold:!0,children:\g<2>})," 连接"]
 children:"Live"|children:"实时"
-/`\${(\w+?)} \${\w+?\("participant",\w+?\)}`/|`${\g<1>} 位参与者`
+/`\${(\w+?)} \${[\w$]+?\("participant",\w+?\)}`/|`${\g<1>} 位参与者`
 message:"Latest update is already downloaded."|message:"已下载最新更新。"
 title:"Update Ready"|title:"更新准备就绪"
 detail:"The update will be applied after restart."|detail:"更新将在重启后应用。"

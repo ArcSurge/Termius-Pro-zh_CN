@@ -179,6 +179,7 @@ jobs:
           allowUpdates: true
           tag: v${{ env.TERMIUS_VERSION }}-beta
           body: ${{ steps.prepare_release_notes.outputs.release_notes }}
+          commit: 'beta'
           draft: true
           prerelease: true
           artifacts: ${{ env.TEMP_DIR }}/*.asar

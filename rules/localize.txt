@@ -1,5 +1,5 @@
 #开启调试
-/\.\.\.([\w]+)\(\!1,\[\{label:"Termius Dev Tools"/|...\g<1>(!0,[{label:"Termius Dev Tools"
+#/\.\.\.([\w]+)\(\!1,\[\{label:"Termius Dev Tools"/|...\g<1>(!0,[{label:"Termius Dev Tools"
 "Termius Dev Tools"|"Termius 开发者工具"
 "Background Dev Tools"|"后台开发者工具"
 "Focused Window Dev Tools"|"当前窗口的开发者工具"

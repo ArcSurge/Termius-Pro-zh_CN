@@ -424,10 +424,9 @@
   <string name="copy_download_link_label">复制下载链接</string>
   <string name="copy_finished">已复制到剪贴板</string>
   <string name="copy_paste_menu_copy">复制</string>
-  <string name="copy_paste_menu_google">Google</string>
   <string name="copy_paste_menu_paste">粘贴</string>
+  <string name="copy_paste_menu_select">选择</string>
   <string name="copy_paste_menu_select_all">全选</string>
-  <string name="copy_paste_menu_serverfault">Serverfault</string>
   <string name="copy_to_clipboard_action">复制</string>
   <string name="copy_to_vault_option">复制到保管库...</string>
   <string name="copy_toast_msg">链接已复制到剪贴板</string>
@@ -829,7 +828,7 @@
   <string name="follow_us_on_twitter">在 X 上关注我们</string>
   <string name="font_settings_dialog_title">选择方案 &amp; 字体大小</string>
   <string name="font_size_seek_bar_max">\21</string>
-  <string name="font_size_seek_bar_min">\8</string>
+  <string name="font_size_seek_bar_min">\4</string>
   <string name="force_two_factor_auth_successfully_configured">双重验证已成功配置</string>
   <string name="forgot_password">忘记密码？</string>
   <string name="fragment_licenses_retrofit">Retrofit</string>
@@ -873,7 +872,6 @@
   <string name="google_crash_reporting_api_key">AIzaSyDwmrUqDja3uFh_mHtzL1XMLRD7YuCxGB0</string>
   <string name="google_play_link">https://play.google.com/store/apps/details?id=com.server.auditor.ssh.client</string>
   <string name="google_play_services_unavailable_error_message">Google Play Services unavailable</string>
-  <string name="google_search_link">https://www.google.com/search?q=%1$s</string>
   <string name="google_sign_in_is_temporarily_unavailable_please_try_again_later">Google 登录暂时不可用，请稍后再试。</string>
   <string name="google_storage_bucket">termius-dev-49478.appspot.com</string>
   <string name="got_it">明白了</string>
@@ -1906,7 +1904,6 @@ echo '$3' &gt;&gt; "$1/$2";</string>
   <string name="serial_connection_fallback_title">串口连接</string>
   <string name="serial_connection_suggestion_title">启动串行连接</string>
   <string name="serial_connection_title">串行连接</string>
-  <string name="serverfault_search_link">https://serverfault.com/search?q=%1$s</string>
   <string name="service_unavailable">服务不可用</string>
   <string name="session_expired_log_back_in">请重新登录以继续</string>
   <string name="session_log_create_comment">保存日志</string>

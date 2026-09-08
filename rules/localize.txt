@@ -1633,3 +1633,6 @@ children:"Contact support"|children:"联系支持"
 "you have an active internet connection"|"你的设备已连接到互联网"
 "your firewall allows internet access for the Termius app"|"防火墙允许 Termius 应用访问互联网"
 "your firewall allows HTTP requests to and responses from the api.termius.com server"|"防火墙允许向 api.termius.com 服务器发送 HTTP 请求并接收响应"
+children:"Update"|children:"更新"
+/children:\["The update will be available after",(\S+?),"the new version ",(\w+?)," is downloaded."\]/|children:["下载新版本 ",\g<2>," 后将提供更新。"]
+/children:\["Restart and update to version ",(\S+?),"Read the"," ",(\S+?)," ","for release notes"\]/|children:["重启并更新至版本 ",\g<1>,"阅读"," ",\g<2>," ","以获取发行说明"]

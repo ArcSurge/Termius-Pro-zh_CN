@@ -32,8 +32,8 @@ jobs:
               sudo apt-get update
               sudo apt-get install -y libnotify4 libsecret-1-0 python3-tk
               sudo dpkg -i Termius.deb || { echo "::error::Failed to install Termius"; exit 1; }
-              sudo chmod -R 755 /opt/Termius/resources
-              sudo chown -R $USER:$USER /opt/Termius/resources
+              sudo chmod -R 755 /opt/Termius
+              sudo chown -R $USER:$USER /opt/Termius
             source_path: "/opt/Termius/resources/app.asar"
           - platform: macos
             run_on: macos-latest

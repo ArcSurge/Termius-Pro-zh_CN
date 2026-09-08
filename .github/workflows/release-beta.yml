@@ -32,8 +32,8 @@ jobs:
               sudo apt-get update
               sudo apt-get install -y libnotify4 libsecret-1-0 python3-tk
               sudo dpkg -i TermiusBeta.deb || { echo "::error::Failed to install Termius Beta"; exit 1; }
-              sudo chmod -R 755 "/opt/Termius Beta/resources"
-              sudo chown -R $USER:$USER "/opt/Termius Beta/resources"
+              sudo chmod -R 755 "/opt/Termius Beta"
+              sudo chown -R $USER:$USER "/opt/Termius Beta"
             source_path: "/opt/Termius Beta/resources/app.asar"
           - platform: macos
             run_on: macos-latest

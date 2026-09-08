@@ -434,11 +434,23 @@ class TermiusModifier:
         if state != FUSE_ON:
             logging.warning(f"Unexpected fuse state {bytes([state])!r}, skip")
             return
+        # 预检写权限：需同时可写可执行文件及其所在目录（临时文件建在目录内），
+        # Linux 安装目录属主通常为 root，提前给出准确提示而不是写入中途报 EACCES
+        if not (os.access(exe_path, os.W_OK) and os.access(os.path.dirname(exe_path), os.W_OK)):
+            logging.error(
+                f"No write permission for Termius executable: {exe_path}. "
+                "Disabling asar integrity validation requires elevated privileges "
+                "(run as administrator on Windows, or use sudo on Linux/macOS)."
+            )
+            sys.exit(1)
         content = content[:offset] + bytes([FUSE_OFF]) + content[offset + 1:]
         try:
             write_file_atomic(exe_path, content)
-        except (OSError, PermissionError) as e:
-            logging.error(f"Failed to write executable: {e}. Make sure Termius is fully closed.")
+        except OSError as e:
+            logging.error(
+                f"Failed to write executable: {e}. Make sure Termius is fully closed "
+                "and you have write access to the Termius directory."
+            )
             sys.exit(1)
         logging.info("Asar integrity validation disabled (EnableEmbeddedAsarIntegrityValidation)")
 

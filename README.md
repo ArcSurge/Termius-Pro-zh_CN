@@ -86,6 +86,10 @@ extract/
   - **MacOS**: `/Applications/Termius.app/Contents`。
 3. 将下载的 `app.asar` 文件覆盖 `resources` 文件夹下的 `app.asar` 文件。
   - **注意**，macOS 替换后需要运行 [osxfix.sh](macos/osxfix.sh) 重新计算文件 hash 后方可使用。
+  - **注意**，新版 Termius 启用了 asar 完整性校验，Windows/Linux 需先关闭该熔丝方可启动（详见 [FAQ Q3](#q3-替换-appasar-后应用无法启动integrity-check-failed)）：
+    ```bash
+    npx @electron/fuses flip --app "C:\Users\你的用户名\AppData\Local\Programs\Termius\Termius.exe" --flipEnableEmbeddedAsarIntegrityValidation=false
+    ```
 4. 如果你不想自动更新，请删除 `app-update.yml` 文件。
 5. 最后，如果没有想要的版本，可在 [Fork][fork] 本项目后前往仓库的 **Settings > Secrets and variables > Actions > Variables** 页面定义变量:
   - **Name**: `RELEASE_LIST`
@@ -155,6 +159,19 @@ extract/
 - **macOS/Linux:** 在命令前添加 `sudo`，例如：`sudo python lang.py -l`
 - 确保 Termius 已完全关闭，没有后台进程占用文件
 - 请检查权限，确保当前用户有 `resources` 目录的写权限
+
+### Q3: 替换 app.asar 后应用无法启动（Integrity check failed）
+
+**Q：** 新版 Termius 启用了 Electron 的 asar 完整性校验（`EnableEmbeddedAsarIntegrityValidation`），替换后的 `app.asar` 因哈希不匹配而被阻止启动。
+
+**A：**
+
+- 使用脚本汉化：`lang.py` 会自动关闭该校验，无需额外操作。
+- 手动汉化：需先用 `@electron/fuses` 关闭熔丝（以 Windows 为例，macOS/Linux 路径见上方手动汉化章节）：
+  ```bash
+  npx @electron/fuses flip --app "C:\Users\你的用户名\AppData\Local\Programs\Termius\Termius.exe" --flipEnableEmbeddedAsarIntegrityValidation=false
+  ```
+- macOS 无需此操作，运行 [osxfix.sh](macos/osxfix.sh) 更新预期 hash 即可。
 
 ## 🔔 注意事项
 

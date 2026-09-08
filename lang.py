@@ -16,6 +16,32 @@ from tkinter import filedialog
 from logger import setup_logging
 
 
+# Electron v1 熔丝表（格式参考 @electron/fuses）：
+# [哨兵字符串][版本号 1 字节][熔丝数量 1 字节][状态字节 x N]
+# 状态字节 '1'/'0'/'r' 分别表示开启/关闭/移除
+FUSE_SENTINEL = b"dL7pKGdnNz796PbbjQWNKmHXBZaB9tsX"
+FUSE_ASAR_INTEGRITY = 4  # EnableEmbeddedAsarIntegrityValidation 在熔丝表中的序号
+FUSE_ON = 0x31           # '1'
+FUSE_OFF = 0x30          # '0'
+FUSE_REMOVED = 0x72      # 'r'
+
+
+def scan_file_for_sentinel(file_path, chunk_size=1024 * 1024):
+    """流式扫描文件是否包含熔丝哨兵字符串"""
+    tail = b""
+    try:
+        with open(file_path, "rb") as file:
+            while True:
+                chunk = file.read(chunk_size)
+                if not chunk:
+                    return False
+                if FUSE_SENTINEL in tail + chunk:
+                    return True
+                tail = chunk[-(len(FUSE_SENTINEL) - 1):]
+    except OSError:
+        return False
+
+
 def is_macos():
     """检测是否为 macOS 系统"""
     return platform.system() == 'Darwin'
@@ -60,11 +86,14 @@ def read_file(file_path, strip_empty=True):
 
 
 def write_file_atomic(file_path, content):
-    """原子写入文件：先写临时文件再替换，避免中断导致损坏"""
+    """原子写入文件：先写临时文件再替换，避免中断导致损坏（支持文本和二进制内容）"""
+    binary = isinstance(content, (bytes, bytearray))
     file_dir = os.path.dirname(file_path) or "."
     temp_path = None
     try:
-        with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=file_dir, delete=False) as temp_file:
+        mode = "wb" if binary else "w"
+        encoding = None if binary else "utf-8"
+        with tempfile.NamedTemporaryFile(mode, encoding=encoding, dir=file_dir, delete=False) as temp_file:
             temp_file.write(content)
             temp_path = temp_file.name
         if temp_path is not None:
@@ -248,12 +277,11 @@ def get_termius_path(beta=False):
     }
     system = platform.system()
     path_generator = default_paths.get(system)
-
-    if path_generator:
-        termius_path = path_generator()
-    else:
+    if not path_generator:
         logging.error(f"Unsupported operating system: {system}")
         sys.exit(1)
+
+    termius_path = path_generator()
 
     # 验证路径有效性，无效则让用户手动选择
     if not check_asar_existence(termius_path):
@@ -301,6 +329,15 @@ class TermiusModifier:
         """规则文件目录"""
         return os.path.join(self._script_dir, "rules")
 
+    @property
+    def _executable_candidates(self):
+        """可执行文件候选路径（熔丝表保存在可执行文件内）"""
+        app_name = "Termius Beta" if self.args.beta else "Termius"
+        parent = os.path.dirname(self.termius_path)
+        if is_windows():
+            return [os.path.join(parent, f"{app_name}.exe")]
+        return [os.path.join(parent, app_name), os.path.join(parent, app_name.lower())]
+
     def __init__(self, termius_path, args):
         """初始化修改器实例"""
         self.termius_path = termius_path
@@ -341,6 +378,69 @@ class TermiusModifier:
         self.clean_workspace()
         if os.path.exists(self._backup_path):
             os.remove(self._backup_path)
+
+    def _find_fuse_executable(self):
+        """定位包含熔丝表的可执行文件"""
+        for path in self._executable_candidates:
+            if os.path.isfile(path):
+                return path
+        # 已知名称未命中时，在安装目录一级文件中扫描哨兵字符串兜底
+        parent = os.path.dirname(self.termius_path)
+        try:
+            entries = os.listdir(parent)
+        except OSError:
+            return None
+        for name in entries:
+            path = os.path.join(parent, name)
+            if os.path.isfile(path) and os.path.getsize(path) <= 512 * 1024 * 1024 \
+                    and scan_file_for_sentinel(path):
+                return path
+        return None
+
+    def disable_asar_integrity_validation(self):
+        """关闭可执行文件中的 asar 完整性校验熔丝
+
+        新版 Termius 启用了 EnableEmbeddedAsarIntegrityValidation，替换 app.asar 后
+        启动会因校验失败而被阻止，需要将该熔丝置为关闭。
+        macOS 端由 osxfix.sh 更新 Info.plist 中的预期 hash，无需关闭熔丝，故跳过。
+        """
+        if is_macos():
+            return
+        exe_path = self._find_fuse_executable()
+        if not exe_path:
+            logging.warning("Termius executable not found, skip disabling asar integrity validation")
+            return
+        try:
+            with open(exe_path, "rb") as file:
+                content = file.read()
+        except OSError as e:
+            logging.warning(f"Cannot read executable {exe_path}: {e}")
+            return
+        index = content.find(FUSE_SENTINEL)
+        if index < 0:
+            logging.info("Fuse wire not found in executable, nothing to do")
+            return
+        wire_start = index + len(FUSE_SENTINEL)
+        version, fuse_count = content[wire_start], content[wire_start + 1]
+        if version != 1 or fuse_count <= FUSE_ASAR_INTEGRITY \
+                or len(content) < wire_start + 2 + fuse_count:
+            logging.warning(f"Unsupported fuse wire (version={version}, count={fuse_count}), skip")
+            return
+        offset = wire_start + 2 + FUSE_ASAR_INTEGRITY
+        state = content[offset]
+        if state == FUSE_OFF or state == FUSE_REMOVED:
+            logging.info("Asar integrity validation already disabled")
+            return
+        if state != FUSE_ON:
+            logging.warning(f"Unexpected fuse state {bytes([state])!r}, skip")
+            return
+        content = content[:offset] + bytes([FUSE_OFF]) + content[offset + 1:]
+        try:
+            write_file_atomic(exe_path, content)
+        except (OSError, PermissionError) as e:
+            logging.error(f"Failed to write executable: {e}. Make sure Termius is fully closed.")
+            sys.exit(1)
+        logging.info("Asar integrity validation disabled (EnableEmbeddedAsarIntegrityValidation)")
 
     def decompress_asar(self):
         """解压 app.asar 文件到 app 目录"""
@@ -549,6 +649,7 @@ class TermiusModifier:
         """
         start_time = time.monotonic()
         self.manage_workspace()
+        self.disable_asar_integrity_validation()
         self.decompress_asar()
         self.load_rules()
         self.replace_rules()

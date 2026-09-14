@@ -1263,7 +1263,7 @@ children:"Send a link to your teammates and troubleshoot issues together in the 
 "Secure Sync"|"安全同步"
 "Enable Multiplayer"|"启用多人模式"
 /children:\["Enable ",(\w+?)\("mark",{children:"Multiplayer"}\)," in Termius"\]/|children:["在 Termius 中启用",\g<1>("mark",{children:"多人模式"})]
-/children:\["Terminal ",(\w+?)\("mark",{children:"Multiplayer"}\)\]/|children:["终端",e("mark",{children:"多人模式"})]
+/children:\["Terminal ",(\w+?)\("mark",{children:"Multiplayer"}\)\]/|children:["终端",\g<1>("mark",{children:"多人模式"})]
 children:"Integrations"|children:"集成"
 /children:\["Share this ",([\w$]+?)\.type\]/|children:["共享此",\g<1>.type==="group"?"分组":\g<1>.type==="host"?"主机":\g<1>.type==="snippet"?"代码片段":\g<1>.type]
 "Securely share data via team vaults to boost your team's productivity."|"通过团队保管库安全地共享数据，以提高团队的生产力。"

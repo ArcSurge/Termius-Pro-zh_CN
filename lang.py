@@ -569,11 +569,11 @@ class TermiusModifier:
                 logging.error(f"Failed to load rules from {file_name}: {e}")
                 sys.exit(1)
 
-        # 编译规则：区分注释、正则表达式和普通文本
+        # 编译规则：按文件原始顺序构建有序列表，保留规则间的前后依赖
+        # （短规则可能在完整正则之前出现，必须保持顺序，否则先应用会破坏正则所需原文）
         self.compiled_rules = []
         for line in self.loaded_rules:
             if is_comment_line(line):
-                self.compiled_rules.append(("comment", line, None, None))
                 continue
             try:
                 old_val, new_val = parse_replace_rule(line)
@@ -603,6 +603,7 @@ class TermiusModifier:
     def replace_content(self, file_content):
         """对单个文件内容执行所有规则的替换
 
+        按原始顺序逐条应用，命中才 replace/sub（plain 用 `in` 预检，regex 用 search 预检）。
         Returns:
             tuple: (新内容, 匹配的规则集合)
         """
@@ -612,17 +613,17 @@ class TermiusModifier:
             return file_content, set()
 
         matched_rules = set()
+
+        # 按原始顺序逐条应用：plain 用 `in` 预检、regex 用 search 预检，命中才替换
         for rule_type, line, old_or_pattern, new_val in self.compiled_rules:
-            if rule_type == "comment":
-                matched_rules.add(line)
-                continue
-            original_content = file_content
             if rule_type == "regex":
-                file_content = old_or_pattern.sub(new_val, file_content)
-            else:
-                file_content = file_content.replace(old_or_pattern, new_val)
-            if original_content != file_content:
-                matched_rules.add(line)
+                if old_or_pattern.search(file_content):
+                    matched_rules.add(line)
+                    file_content = old_or_pattern.sub(new_val, file_content)
+            else:  # plain
+                if old_or_pattern in file_content:
+                    matched_rules.add(line)
+                    file_content = file_content.replace(old_or_pattern, new_val)
 
         return file_content, matched_rules
 
@@ -671,9 +672,10 @@ class TermiusModifier:
         elapsed = time.monotonic() - start_time
         logging.info(f"Changes applied in {elapsed:.2f}s")
 
-        # 统计规则匹配情况
-        logging.info(f"Rules applied: {len(self.applied_rules)}/{len(self.loaded_rules)}")
-        unmatched_rules = list(filter(lambda x: x not in self.applied_rules, self.loaded_rules))
+        # 统计规则匹配情况（仅统计 compiled_rules 有效规则，排除注释行）
+        total_rule_lines = [line for _, line, _, _ in self.compiled_rules]
+        logging.info(f"Rules applied: {len(self.applied_rules)}/{len(total_rule_lines)}")
+        unmatched_rules = [line for line in total_rule_lines if line not in self.applied_rules]
         if unmatched_rules:
             if len(unmatched_rules) > 3:
                 logging.warning(f"{len(unmatched_rules)} rules did not match. See debug log for details.")

@@ -173,6 +173,14 @@ extract/
   ```
 - macOS 无需此操作，运行 [osxfix.sh](macos/osxfix.sh) 更新预期 hash 即可。
 
+### Q4: 自动更新失败（Code signature did not pass validation）
+
+**Q：** Termius 后台更新时报 `did not pass validation`，或更新后应用无法启动。
+
+**A：**
+
+- 这是替换 `app.asar` 破坏代码签名导致的，内置自动更新无法继续使用，请前往 [官网](https://termius.com) 手动下载安装新版。
+
 ## 🔔 注意事项
 
 - 该项目仅适用于本地学习和测试，不支持在线功能。

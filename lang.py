@@ -25,6 +25,11 @@ FUSE_ON = 0x31           # '1'
 FUSE_OFF = 0x30          # '0'
 FUSE_REMOVED = 0x72      # 'r'
 
+# 字符串提取的过滤阈值
+MIN_STRING_LENGTH = 4        # 下界：短于此长度的多为压缩后的符号碎片
+MAX_STRING_LENGTH = 300      # 上界：更长的多为代码或数据块
+SPACE_REQUIRED_ABOVE = 20    # 超过此长度必须含空格，否则多为压缩后的标识符
+
 
 def scan_file_for_sentinel(file_path, chunk_size=1024 * 1024):
     """流式扫描文件是否包含熔丝哨兵字符串"""
@@ -509,7 +514,7 @@ class TermiusModifier:
     def extract_all_strings(self):
         """从 JS 和 JSON 文件中提取所有字符串到 allstring.txt
 
-        提取双引号、单引号和模板字符串，过滤短字符串和纯数字
+        提取双引号、单引号和模板字符串，过滤短碎片、首尾空白、换行/制表、超长串和纯数字
         """
         try:
             extract_dir = os.path.join(self._script_dir, "extract")
@@ -545,9 +550,15 @@ class TermiusModifier:
                     except Exception as e:
                         logging.debug(f"Cannot read file {file_path}: {e}")
 
-            # 过滤长度>1、非空白、非纯数字，按长度和字母排序
+            # 过滤短碎片、首尾空白、换行/制表、超长串和纯数字；
+            # 超过 SPACE_REQUIRED_ABOVE 的无空格串多为压缩标识符
             filtered_strings = sorted(
-                [s for s in all_strings if len(s) > 1 and not s.isspace() and not number_pattern.match(s)],
+                [s for s in all_strings
+                 if MIN_STRING_LENGTH <= len(s) <= MAX_STRING_LENGTH
+                 and s == s.strip()
+                 and "\n" not in s and "\t" not in s and "\r" not in s
+                 and (len(s) <= SPACE_REQUIRED_ABOVE or " " in s)
+                 and not number_pattern.match(s)],
                 key=lambda x: (len(x), x.lower())
             )
 

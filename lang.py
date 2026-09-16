@@ -85,17 +85,38 @@ def read_file(file_path, strip_empty=True):
         raise RuntimeError(f"Read error: {file_path} - {e}") from e
 
 
-def write_file_atomic(file_path, content):
-    """原子写入文件：先写临时文件再替换，避免中断导致损坏（支持文本和二进制内容）"""
-    binary = isinstance(content, (bytes, bytearray))
+def write_file_atomic(file_path, content=None, offsets=None):
+    """原子写入文件：先写临时文件再替换，避免中断导致损坏（支持文本和二进制内容）
+
+    Args:
+        file_path: 文件路径
+        content: 完整内容（bytes 走二进制，其他按 utf-8 文本写入），整体覆写时必填
+        offsets: 局部补丁 {偏移: 补丁}，提供时只在副本上改写补丁位置，
+                 避免为改几个字节而整块读写（如数百 MB 的可执行文件）
+    """
     file_dir = os.path.dirname(file_path) or "."
     temp_path = None
     try:
-        mode = "wb" if binary else "w"
-        encoding = None if binary else "utf-8"
-        with tempfile.NamedTemporaryFile(mode, encoding=encoding, dir=file_dir, delete=False) as temp_file:
-            temp_file.write(content)
-            temp_path = temp_file.name
+        if offsets:
+            fd, temp_path = tempfile.mkstemp(dir=file_dir)
+            os.close(fd)
+            shutil.copyfile(file_path, temp_path)
+            # mkstemp 默认 0600 且 copyfile 不带权限位，需还原，否则会丢掉可执行位
+            shutil.copymode(file_path, temp_path)
+            with open(temp_path, "r+b") as temp_file:
+                for offset, patch in sorted(offsets.items()):
+                    temp_file.seek(offset)
+                    temp_file.write(patch if isinstance(patch, (bytes, bytearray))
+                                    else patch.encode("utf-8"))
+        else:
+            if content is None:
+                raise ValueError("write_file_atomic: content is required when offsets is empty")
+            binary = isinstance(content, (bytes, bytearray))
+            mode = "wb" if binary else "w"
+            encoding = None if binary else "utf-8"
+            with tempfile.NamedTemporaryFile(mode, encoding=encoding, dir=file_dir, delete=False) as temp_file:
+                temp_file.write(content)
+                temp_path = temp_file.name
         if temp_path is not None:
             os.replace(temp_path, file_path)
     finally:
@@ -443,9 +464,9 @@ class TermiusModifier:
                 "(run as administrator on Windows, or use sudo on Linux/macOS)."
             )
             sys.exit(1)
-        content = content[:offset] + bytes([FUSE_OFF]) + content[offset + 1:]
+        # 只改 1 字节，用局部补丁避免整块读写可执行文件
         try:
-            write_file_atomic(exe_path, content)
+            write_file_atomic(exe_path, offsets={offset: bytes([FUSE_OFF])})
         except OSError as e:
             logging.error(
                 f"Failed to write executable: {e}. Make sure Termius is fully closed "
@@ -495,7 +516,7 @@ class TermiusModifier:
             os.makedirs(extract_dir, exist_ok=True)
             all_strings_file = os.path.join(extract_dir, "allstring.txt")
 
-            # 编译正则表达式（避免重复编译）
+            # 编译正则（避免每条字符串重复编译）
             patterns = [
                 re.compile(r'"([^"\\]*(?:\\.[^"\\]*)*)"'),
                 re.compile(r"'([^'\\]*(?:\\.[^'\\]*)*)'"),
@@ -518,13 +539,13 @@ class TermiusModifier:
                         with open(file_path, 'r', encoding='utf-8') as f:
                             content = f.read()
 
-                        # 提取三种类型的字符串
+                        # 提取单引号、双引号、模板字符串
                         for pattern in patterns:
                             all_strings.update(pattern.findall(content))
                     except Exception as e:
                         logging.debug(f"Cannot read file {file_path}: {e}")
 
-            # 过滤：长度>1、非空白、非纯数字，按长度和字母排序
+            # 过滤长度>1、非空白、非纯数字，按长度和字母排序
             filtered_strings = sorted(
                 [s for s in all_strings if len(s) > 1 and not s.isspace() and not number_pattern.match(s)],
                 key=lambda x: (len(x), x.lower())
@@ -638,7 +659,7 @@ class TermiusModifier:
                 content = read_file(file_path, strip_empty=False)
                 new_content, matched_rules = self.replace_content(content)
                 self.applied_rules.update(matched_rules)
-                if new_content != content:
+                if matched_rules:
                     write_file_atomic(file_path, new_content)
             except Exception as e:
                 logging.error(f"Failed to process file {file_path}: {e}")

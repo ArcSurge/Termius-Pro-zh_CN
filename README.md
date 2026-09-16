@@ -88,7 +88,7 @@ extract/
   - **注意**，macOS 替换后需要运行 [osxfix.sh](macos/osxfix.sh) 重新计算文件 hash 后方可使用。
   - **注意**，新版 Termius 启用了 asar 完整性校验，Windows/Linux 需先关闭该熔丝方可启动（详见 [FAQ Q3](#q3-替换-appasar-后应用无法启动integrity-check-failed)）：
     ```bash
-    npx @electron/fuses flip --app "C:\Users\你的用户名\AppData\Local\Programs\Termius\Termius.exe" --flipEnableEmbeddedAsarIntegrityValidation=false
+    npx @electron/fuses write --app "C:\Users\你的用户名\AppData\Local\Programs\Termius\Termius.exe" EnableEmbeddedAsarIntegrityValidation=off
     ```
 4. 如果你不想自动更新，请删除 `app-update.yml` 文件。
 5. 最后，如果没有想要的版本，可在 [Fork][fork] 本项目后前往仓库的 **Settings > Secrets and variables > Actions > Variables** 页面定义变量:
@@ -169,7 +169,7 @@ extract/
 - 使用脚本汉化：`lang.py` 会自动关闭该校验，无需额外操作。
 - 手动汉化：需先用 `@electron/fuses` 关闭熔丝（以 Windows 为例，macOS/Linux 路径见上方手动汉化章节）：
   ```bash
-  npx @electron/fuses flip --app "C:\Users\你的用户名\AppData\Local\Programs\Termius\Termius.exe" --flipEnableEmbeddedAsarIntegrityValidation=false
+  npx @electron/fuses write --app "C:\Users\你的用户名\AppData\Local\Programs\Termius\Termius.exe" EnableEmbeddedAsarIntegrityValidation=off
   ```
 - macOS 无需此操作，运行 [osxfix.sh](macos/osxfix.sh) 更新预期 hash 即可。
 

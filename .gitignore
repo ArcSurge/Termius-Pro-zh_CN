@@ -13,4 +13,6 @@ debug.js
 */.tmp_dir
 */keystore
 .vscode/
+.zcode/
+.workbuddy-ai/
 extract/

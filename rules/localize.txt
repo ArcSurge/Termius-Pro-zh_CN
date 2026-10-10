@@ -1325,11 +1325,10 @@ title:"Logs"|title:"日志"
 "Upgrade your plan"|"升级你的套餐"
 /`You are currently on a \${(\w+?)} plan\.`/|`当前正在使用 ${\g<1>} 版套餐.`
 "Your subscription has expired"|"你的订阅已过期"
-"Choose the right plan for you."|"选择适合你的计划。"
+"Choose the right plan for you."|"选择适合你的套餐。"
 "Your free trial has expired"|"你的免费试用已过期"
-"Choose the right plan for you"|"选择适合你的计划"
-
-"You are currently on a Starter plan."
+"Choose the right plan for you"|"选择适合你的套餐"
+"You are currently on a Starter plan."|"你当前正在使用入门版。"
 "Don't need a team?"|"不需要团队吗?"
 "Stay on your Pro plan"|"保持你的专业版套餐"
 

@@ -79,17 +79,35 @@ extract/
 
 如果没有相关环境，可以手动汉化。
 
-1. 前往 [Releases][releases] 下载对应版本的 `app.asar` 文件。
+1. 前往 [Releases][releases] 下载对应版本的 `app-xxx.asar` 文件。
 2. 找到 Termius 安装目录，通常位置为:
   - **Windows**: `C:\Users\你的用户名\AppData\Local\Programs\Termius`。
   - **Linux**: `/opt/Termius`。
   - **MacOS**: `/Applications/Termius.app/Contents`。
-3. 将下载的 `app.asar` 文件覆盖 `resources` 文件夹下的 `app.asar` 文件。
+
+  <details>
+  <summary>对于 Beta 用户</summary>
+      
+  - **Windows**: `C:\Users\你的用户名\AppData\Local\Programs\Termius Beta`。
+  - **Linux**: `/opt/Termius Beta`。
+  - **MacOS**: `/Applications/Termius Beta.app/Contents`。
+      
+  </details>
+  
+3. 将下载的 `app-xxx.asar` 文件重命名为 `app.asar` 后覆盖 `resources` 文件夹下的 `app.asar` 文件。
   - **注意**，macOS 替换后需要运行 [osxfix.sh](macos/osxfix.sh) 重新计算文件 hash 后方可使用。
   - **注意**，新版 Termius 启用了 asar 完整性校验，Windows/Linux 需先关闭该熔丝方可启动（详见 [FAQ Q3](#q3-替换-appasar-后应用无法启动integrity-check-failed)）：
     ```bash
     npx @electron/fuses write --app "C:\Users\你的用户名\AppData\Local\Programs\Termius\Termius.exe" EnableEmbeddedAsarIntegrityValidation=off
     ```
+    <details>
+      <summary>Termius Beta 用户请执行此命令</summary>
+      
+      ``` shell
+      npx @electron/fuses write --app "C:\Users\你的用户名\AppData\Local\Programs\Termius Beta\Termius Beta.exe" EnableEmbeddedAsarIntegrityValidation=off
+      ```
+    </details>
+
 4. 如果你不想自动更新，请删除 `app-update.yml` 文件。
 5. 最后，如果没有想要的版本，可在 [Fork][fork] 本项目后前往仓库的 **Settings > Secrets and variables > Actions > Variables** 页面定义变量:
   - **Name**: `RELEASE_LIST`
@@ -171,6 +189,15 @@ extract/
   ```bash
   npx @electron/fuses write --app "C:\Users\你的用户名\AppData\Local\Programs\Termius\Termius.exe" EnableEmbeddedAsarIntegrityValidation=off
   ```
+
+  <details>
+      <summary>Termius Beta 用户请执行此命令</summary>
+    
+     ``` shell
+      npx @electron/fuses write --app "C:\Users\你的用户名\AppData\Local\Programs\Termius Beta\Termius Beta.exe" EnableEmbeddedAsarIntegrityValidation=off
+     ```
+  </details>
+
 - macOS 无需此操作，运行 [osxfix.sh](macos/osxfix.sh) 更新预期 hash 即可。
 
 ### Q4: 自动更新失败（Code signature did not pass validation）
@@ -180,6 +207,14 @@ extract/
 **A：**
 
 - 这是替换 `app.asar` 破坏代码签名导致的，内置自动更新无法继续使用，请前往 [官网](https://termius.com) 手动下载安装新版。
+
+### Q5: 替换 app.asar 后，软件异常
+
+**Q：** 如登录态丢失，且无法重新登陆、软件 logo 错误等
+
+**A：**
+
+- 这是因为使用了与版本不匹配的 asar 导致的，请确保使用了对应版本的 asar，同时**正式版与 Beta 版的 asar 不可混用**
 
 ## 🔔 注意事项
 

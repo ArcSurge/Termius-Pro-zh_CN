@@ -1,4 +1,4 @@
 beautifulsoup4==4.13.4
-cloudscraper==1.2.71
+curl_cffi==0.16.3
 requests==2.32.4
 tqdm==4.67.1

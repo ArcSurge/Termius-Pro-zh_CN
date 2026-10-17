@@ -1,5 +1,5 @@
 import argparse
-import cloudscraper
+from curl_cffi import requests as _cf_requests
 import logging
 import os
 import platform
@@ -12,8 +12,7 @@ import sys
 import time
 
 from bs4 import BeautifulSoup, Tag
-from cloudscraper.exceptions import CloudflareChallengeError, CloudflareCaptchaError
-from requests.exceptions import ConnectionError, HTTPError, Timeout, TooManyRedirects
+from curl_cffi.requests.exceptions import (ConnectionError, HTTPError, Timeout, TooManyRedirects)
 from pathlib import Path
 from tqdm import tqdm
 
@@ -50,15 +49,10 @@ GLOBAL_HEADERS = {
 def get_scraper():
     """Get CloudScraper instance"""
     return CloudScraperWrapper(
-        browser={
-            'browser': 'chrome',
-            'platform': 'windows',
-            'mobile': False
-        },
+        impersonate='chrome',
         delay=5,
         timeout=30,
         max_retries=3,
-        user_agent=GLOBAL_HEADERS["User-Agent"],
         debug=True
     )
 
@@ -154,27 +148,16 @@ def create_or_recreate_dir(dir_path):
 
 
 class CloudScraperWrapper:
-    def __init__(self, browser=None, delay=5, timeout=30, max_retries=3, user_agent=None, debug=False):
-        self.browser = browser or {
-            'browser': 'chrome',
-            'platform': 'windows',
-            'mobile': False,
-            'desktop': True
-        }
+    def __init__(self, impersonate='chrome', delay=5, timeout=30, max_retries=3, debug=False):
+        self.impersonate = impersonate
         self.delay = delay
         self.timeout = timeout
         self.max_retries = max_retries
-        self.user_agent = user_agent
         self.debug = debug
         self.scraper = self._create_scraper()
 
     def _create_scraper(self):
-        scraper = cloudscraper.create_scraper(browser=self.browser, delay=self.delay)
-
-        if self.user_agent:
-            scraper.headers.update({'User-Agent': self.user_agent})
-
-        return scraper
+        return _cf_requests.Session(impersonate=self.impersonate)
 
     def _log(self, message, level="INFO"):
         level = level.lower().strip()
@@ -186,15 +169,7 @@ class CloudScraperWrapper:
             log(message)
 
     def _handle_exception(self, e: Exception, attempt: int) -> bool:
-        if isinstance(e, CloudflareCaptchaError):
-            self._log(f"Manual captcha required, stop retrying: {str(e)[:200]}", "ERROR")
-            return False
-
-        elif isinstance(e, CloudflareChallengeError):
-            self._log(f"Cloudflare validation failed (Attempt {attempt + 1}/{self.max_retries}): {str(e)[:200]}", "WARNING")
-            return attempt < self.max_retries - 1
-
-        elif isinstance(e, Timeout):
+        if isinstance(e, Timeout):
             self._log(f"Request timeout (Attempt {attempt + 1}/{self.max_retries}): {str(e)}", "WARNING")
             return attempt < self.max_retries - 1
 
@@ -224,6 +199,13 @@ class CloudScraperWrapper:
 
         if self.timeout:
             kwargs.setdefault('timeout', self.timeout)
+        # Chrome impersonation fingerprint and re-trigger the Cloudflare
+        # challenge (HTTP 403). Let impersonation provide the header instead.
+        headers = kwargs.get('headers')
+        if isinstance(headers, dict):
+            headers = dict(headers)
+            headers.pop('User-Agent', None)
+            kwargs['headers'] = headers
 
         for attempt in range(self.max_retries):
             try:
@@ -237,7 +219,10 @@ class CloudScraperWrapper:
                 # Check HTTP errors
                 response.raise_for_status()
 
-                self._log(f"Successfully received response: {len(response.content)} bytes")
+                # Do not read the body here for streaming downloads, otherwise
+                # it would consume the stream before `download()` iterates over it.
+                if not kwargs.get('stream'):
+                    self._log(f"Successfully received response: {len(response.content)} bytes")
                 return response
 
             except Exception as e:

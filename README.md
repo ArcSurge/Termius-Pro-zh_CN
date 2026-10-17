@@ -84,7 +84,7 @@ extract/
   - **Windows**: `C:\Users\你的用户名\AppData\Local\Programs\Termius`。
   - **Linux**: `/opt/Termius`。
   - **MacOS**: `/Applications/Termius.app/Contents`。
-3. 将下载的 `app-xxx.asar` 文件重命名为`app.asar`后覆盖 `resources` 文件夹下的 `app.asar` 文件。
+3. 将下载的 `app-xxx.asar` 文件重命名为 `app.asar` 后覆盖 `resources` 文件夹下的 `app.asar` 文件。
   - **注意**，macOS 替换后需要运行 [osxfix.sh](macos/osxfix.sh) 重新计算文件 hash 后方可使用。
   - **注意**，新版 Termius 启用了 asar 完整性校验，Windows/Linux 需先关闭该熔丝方可启动（详见 [FAQ Q3](#q3-替换-appasar-后应用无法启动integrity-check-failed)）：
     ```bash

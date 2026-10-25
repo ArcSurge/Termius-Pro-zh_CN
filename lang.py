@@ -274,6 +274,31 @@ def check_asar_existence(path):
     return os.path.exists(os.path.join(path, "app.asar"))
 
 
+def resolve_resources_dir(path, max_depth=3):
+    """向下定位包含 app.asar 的目录
+
+    用户可能选到安装根目录而非 resources，macOS 上还可能选到 .app 或 Contents，
+    故仅在 resources/contents 子目录中逐层查找，避免误扫整个安装目录。
+    """
+    if not is_valid_path(path):
+        return None
+    if check_asar_existence(path):
+        return path
+    if max_depth <= 0:
+        return None
+    try:
+        entries = sorted(os.listdir(path))
+    except OSError:
+        return None
+    for name in entries:
+        sub_path = os.path.join(path, name)
+        if os.path.isdir(sub_path) and name.lower() in ("resources", "contents"):
+            found = resolve_resources_dir(sub_path, max_depth - 1)
+            if found:
+                return found
+    return None
+
+
 def select_directory(title):
     """弹出文件夹选择对话框"""
     try:
@@ -288,9 +313,7 @@ def select_directory(title):
 
 
 def get_termius_path(beta=False):
-    """获取 Termius 安装路径
-
-    自动检测各平台默认路径，若未找到则弹出对话框让用户选择
+    """获取 Termius 的 resources 目录路径
 
     Args:
         beta: 是否为 Beta 版本
@@ -308,17 +331,23 @@ def get_termius_path(beta=False):
         sys.exit(1)
 
     termius_path = path_generator()
-
-    # 验证路径有效性，无效则让用户手动选择
-    if not check_asar_existence(termius_path):
-        logging.warning(f"app.asar not found at default location: {termius_path}")
-        logging.info("Please select the Termius installation directory manually.")
-        termius_path = select_directory("Select Termius directory containing app.asar")
-        if not termius_path or not check_asar_existence(termius_path):
-            logging.error("Valid app.asar file not found. Exiting.")
+    if check_asar_existence(termius_path):
+        return termius_path
+    logging.warning(f"app.asar not found at default location: {termius_path}")
+    logging.info(f"Please select the '{app_name}' installation directory "
+                 f"(the folder containing the 'resources' subfolder) or the 'resources' folder itself.")
+    while True:
+        selected = select_directory("Select the Termius installation folder (containing 'resources')")
+        if not selected:
+            logging.error("No directory selected. Exiting.")
             sys.exit(1)
-
-    return termius_path
+        resolved = resolve_resources_dir(selected)
+        if resolved:
+            if os.path.normcase(os.path.abspath(resolved)) != os.path.normcase(os.path.abspath(selected)):
+                logging.info(f"Using resources directory: {resolved}")
+            return resolved
+        logging.error(f"app.asar not found in '{selected}' or its 'resources' subfolder. "
+                      "Make sure Termius is installed and select its installation directory again.")
 
 
 def check_asar_installed():

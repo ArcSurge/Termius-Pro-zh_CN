@@ -28,6 +28,9 @@ npm install -g @electron/asar
 ```bash
 # 默认执行汉化操作
 python lang.py
+
+# 操作 Beta 版（与正式版 asar 不可混用）
+python lang.py -bl
 ```
 
 ### 🪄 高级功能
@@ -53,6 +56,7 @@ python lang.py --extract
 
 | 参数                | 简写   | 功能说明       | 示例                                  |
 |-------------------|------|------------|-------------------------------------|
+| `--beta`          | `-b` | 操作 Beta 版（默认操作正式版，两者 asar 不可混用） | `python lang.py -bl`               |
 | `--localize`      | `-l` | 汉化操作(默认)   | `python lang.py`                    |
 | `--trial`         | `-t` | 激活试用功能     | `python lang.py -lt`                |
 | `--skip-login`    | `-k` | 跳过登录验证     | `python lang.py -lk`                |
@@ -177,6 +181,17 @@ extract/
 - **macOS/Linux:** 在命令前添加 `sudo`，例如：`sudo python lang.py -l`
 - 确保 Termius 已完全关闭，没有后台进程占用文件
 - 请检查权限，确保当前用户有 `resources` 目录的写权限
+
+### Q2.1: 脚本提示选择目录，但选完安装目录后报错找不到 app.asar
+
+**Q：** 脚本实际需要的是安装目录下的 `resources` 子目录（`app.asar` 在其中），只提示“安装目录”容易让用户选错层级。
+
+**A：** 现在两种选择都可以：
+
+- 选安装根目录（如 `C:\Users\你的用户名\AppData\Local\Programs\Termius`），脚本会自动向下定位 `resources`。
+- 直接选 `resources` 目录本身。
+- macOS 选 `Termius.app` 或 `Contents` 也会自动定位到 `Contents/Resources`。
+- 若所选目录下确实没有 `app.asar`，脚本会提示具体路径并重新弹出选择框，而不是直接退出。
 
 ### Q3: 替换 app.asar 后应用无法启动（Integrity check failed）
 

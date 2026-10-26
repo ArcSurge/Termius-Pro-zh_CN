@@ -87,7 +87,9 @@ extract/
 
 ## 🤷 手动汉化
 
-如果没有相关环境，可以手动汉化。
+没有相关环境？可以使用 [一键汉化脚本](installer/README.md)（支持 Windows / macOS / Linux，双击即可），无需安装任何环境。
+
+如果仍想手动操作：
 
 1. 前往 [Releases][releases] 下载对应版本的 `app-xxx.asar` 文件。
 2. 找到 Termius 安装目录，通常位置为:

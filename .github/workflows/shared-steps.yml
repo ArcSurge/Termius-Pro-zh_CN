@@ -140,6 +140,14 @@ jobs:
             python lang.py -"$args" && cp "${{ inputs.source_path }}" "$temp_dir/$file" || exit 1
             echo "✓ $file"
           done
+          cd "$temp_dir"
+          # 生成校验文件，脚本端用它做免下载比对与下载完整性校验。
+          # macOS 没有 sha256sum，回退到 shasum。
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum *.asar | sed 's/ \*/  /' > "SHA256SUMS-${{ inputs.platform }}.txt"
+          else
+            shasum -a 256 *.asar | sed 's/ \*/  /' > "SHA256SUMS-${{ inputs.platform }}.txt"
+          fi
           ls -lah "$temp_dir"
       - name: Prepare release notes
         if: steps.compare_versions.outputs.should_continue == 'true'
@@ -165,7 +173,7 @@ jobs:
           body: ${{ steps.prepare_release_notes.outputs.updated_release_notes }}
           draft: true
           prerelease: false
-          artifacts: ${{ env.TEMP_DIR }}/*.asar
+          artifacts: ${{ env.TEMP_DIR }}/*.asar,${{ env.TEMP_DIR }}/SHA256SUMS-*.txt
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Cleanup temporary resources
         if: always()

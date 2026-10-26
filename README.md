@@ -74,6 +74,12 @@ rules/
 ├── localize.txt    # 汉化规则(-l/--localize时加载)
 ├── skip_login.txt  # 登录跳过规则(-k/--skip-login时加载)
 └── style.txt       # 样式修改规则(-s/--style时加载)
+installer/
+├── Update-TermiusZh-windows-launcher.cmd # Windows 入口(双击)
+├── Update-TermiusZh-windows.ps1          # Windows 主体
+├── Update-TermiusZh-macOS.command        # macOS 入口(双击)
+├── Update-TermiusZh-linux.sh             # Linux 入口
+└── TermiusZh.conf.example                # 配置模板(复制为 TermiusZh.conf 后生效)
 extract/
 ├── app.asar.unpack # 解包出的所有文件
 └── allstring.txt   # 所有可能的字符串
@@ -100,6 +106,11 @@ extract/
   
 3. 将下载的 `app-xxx.asar` 文件重命名为 `app.asar` 后覆盖 `resources` 文件夹下的 `app.asar` 文件。
   - **注意**，macOS 替换后需要运行 [osxfix.sh](macos/osxfix.sh) 重新计算文件 hash 后方可使用。
+  - **一键脚本（推荐，可跳过第 3-5 步）**：全部收在 [installer](installer) 目录，只依赖系统自带工具，自动识别版本、下载对应 asar、关闭熔丝（macOS 还会重算 hash 并重签）。**完整图文说明见 [installer/README.md](installer/README.md)**（面向不熟悉的用户，含每种提示的含义与处理办法）。
+    - **Windows**：[Update-TermiusZh-windows-launcher.cmd](installer/Update-TermiusZh-windows-launcher.cmd)（双击即可；主体为 [Update-TermiusZh-windows.ps1](installer/Update-TermiusZh-windows.ps1)）
+    - **macOS**：[Update-TermiusZh-macOS.command](installer/Update-TermiusZh-macOS.command)（双击即可，首次需右键 → 打开）
+    - **Linux**：[Update-TermiusZh-linux.sh](installer/Update-TermiusZh-linux.sh)（`bash Update-TermiusZh-linux.sh`）
+    - 只想先看结果不改动：Windows 加 `-CheckOnly`，macOS / Linux 加 `--check`；其余参数见 [installer/README.md](installer/README.md) 或 `--help`。
   - **注意**，新版 Termius 启用了 asar 完整性校验，Windows/Linux 需先关闭该熔丝方可启动（详见 [FAQ Q3](#q3-替换-appasar-后应用无法启动integrity-check-failed)）：
     ```bash
     npx @electron/fuses write --app "C:\Users\你的用户名\AppData\Local\Programs\Termius\Termius.exe" EnableEmbeddedAsarIntegrityValidation=off

@@ -1,0 +1,11 @@
+# 批处理依赖 CRLF，转成 LF 后 cmd.exe 可能解析异常。
+*.cmd     text eol=crlf
+
+# 双击运行的脚本保留可执行位，使用 LF。
+*.sh      text eol=lf
+*.command text eol=lf
+
+# 二进制资源不要做换行符转换。
+*.asar    binary
+*.jar     binary
+*.png     binary

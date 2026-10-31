@@ -166,7 +166,7 @@ jobs:
           else
             shasum -a 256 *.asar | sed 's/ \*/  /' > "SHA256SUMS-${{ inputs.platform }}.txt"
           fi
-          ls -lah "$temp_dir"
+          ls -lah .
       - name: Prepare pre-release notes
         if: steps.compare_versions.outputs.should_continue == 'true'
         id: prepare_release_notes

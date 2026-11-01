@@ -404,6 +404,10 @@
   <string name="connection_log_message_platform_authenticator_returned_error_code">平台认证器返回错误：%d</string>
   <string name="connection_log_message_platform_authenticator_returned_unsupported_format">平台认证器返回不支持的格式</string>
   <string name="connection_log_message_requesting_fido2_user_presence">请求 FIDO2 用户存在</string>
+  <string name="connection_log_message_shell_integration_enabled">Shell 集成已启用</string>
+  <string name="connection_log_message_shell_integration_failed">Shell 集成激活失败</string>
+  <string name="connection_log_message_shell_integration_skipped">因你已开始输入，已跳过 Shell 集成</string>
+  <string name="connection_log_message_shell_integration_started">正在提升你的 Shell 性能…</string>
   <string name="connection_status">连接状态</string>
   <string name="connection_troubleshooting_page_url">https://docs.termius.com/help-center/troubleshooting/i-cant-connect-to-a-host</string>
   <string name="connection_type">连接类型</string>
@@ -842,6 +846,7 @@
   <string name="font_size_seek_bar_min">\4</string>
   <string name="force_two_factor_auth_successfully_configured">双重验证已成功配置</string>
   <string name="forgot_password">忘记密码？</string>
+  <string name="fragment_licenses_ghostty">libghostty-vt</string>
   <string name="fragment_licenses_retrofit">Retrofit</string>
   <string name="fragment_licenses_we_use">我们使用的库</string>
   <string name="fragment_licenses_yubioath">yubioath-android</string>
@@ -870,6 +875,27 @@
   <string name="get_started">开始使用</string>
   <string name="get_termius_on_all_devices_button_label">在所有设备上获取 Termius</string>
   <string name="get_the_link_via_email_label">通过电子邮件获取链接</string>
+  <string name="ghostty_android_license">MIT License
+
+Copyright (c) 2024 Mitchell Hashimoto, Ghostty contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the Software), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED AS IS, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</string>
   <string name="go_pro">升级到专业版</string>
   <string name="go_to_log_in">前往登录</string>
   <string name="google_api_key">AIzaSyDwmrUqDja3uFh_mHtzL1XMLRD7YuCxGB0</string>
@@ -1608,6 +1634,9 @@ echo '$1' &gt;&gt; ~/.ssh/authorized_keys</string>
   <string name="notification_connection_failed">连接失败</string>
   <string name="notification_connections_closed">连接已关闭</string>
   <string name="notification_disconnect">已断开</string>
+  <string name="notification_prompt_toast_dismiss_description">关闭</string>
+  <string name="notification_prompt_toast_enable">启用</string>
+  <string name="notification_prompt_toast_text">启用通知以跟踪命令执行状态，并保持会话不被中断。</string>
   <string name="notification_start_connecting">正在连接</string>
   <string name="notification_start_port_forwarding">端口转发已添加</string>
   <string name="notification_start_sftp_session">SFTP 会话连接中</string>
@@ -1754,6 +1783,16 @@ echo '$1' &gt;&gt; ~/.ssh/authorized_keys</string>
   <string name="processing_continuation_title">处理中...</string>
   <string name="processing_your_purchase">正在处理你的购买...</string>
   <string name="processing_your_request">正在处理你的请求...</string>
+  <string name="program_status_blocked">需要你的注意</string>
+  <string name="program_status_blocked_auth">需要凭据</string>
+  <string name="program_status_blocked_permission">需要权限</string>
+  <string name="program_status_blocked_question">等待你的回答</string>
+  <string name="program_status_channel_name">程序状态</string>
+  <string name="program_status_done">已完成</string>
+  <string name="program_status_error">失败</string>
+  <string name="program_status_idle"></string>
+  <string name="program_status_text">%1$s：%2$s</string>
+  <string name="program_status_working">进行中</string>
   <string name="progressdialog_connecting">连接中…</string>
   <string name="progressdialog_key_exp">导出密钥中，请稍候</string>
   <string name="progressdialog_key_gen">生成密钥中，请稍候</string>
@@ -2064,6 +2103,7 @@ echo '$3' &gt;&gt; "$1/$2";</string>
   <string name="settings_key_security_category">pin_category</string>
   <string name="settings_key_shake_action">shake_action</string>
   <string name="settings_key_shake_category">shake_category</string>
+  <string name="settings_key_shell_integration">shell_integration</string>
   <string name="settings_key_show_notifications_dialog">show_notifications_dialog</string>
   <string name="settings_key_show_shortcut_bar">show_shortcut_bar</string>
   <string name="settings_key_sync_identities">use_sync_keys_and_passwords</string>
@@ -2107,6 +2147,8 @@ echo '$3' &gt;&gt; "$1/$2";</string>
   <string name="settings_shake_sens_title">摇动灵敏度</string>
   <string name="settings_shake_summary">摇动绑定功能</string>
   <string name="settings_shake_tilte">摇动设备</string>
+  <string name="settings_shell_integration_summary">让应用能够跟踪 bash、zsh 和 fish 会话的当前目录</string>
+  <string name="settings_shell_integration_title">Shell 集成</string>
   <string name="settings_show_shortcut_bar_title">显示快捷栏</string>
   <string name="settings_ssh_agent_title">SSH 代理转发</string>
   <string name="settings_summary_default">%s</string>
@@ -2349,8 +2391,6 @@ echo '$3' &gt;&gt; "$1/$2";</string>
   <string name="sort_type_small_to_large">从最小到最大</string>
   <string name="sort_type_z_to_a">Z-A 降序</string>
   <string name="specific_bucket_name_hint">存储桶名称（可选）</string>
-  <string name="split_env">production</string>
-  <string name="split_key">810210d42nuks2j8jqqel6rabpunct71gtph</string>
   <string name="ssh">SSH</string>
   <string name="ssh_">ssh </string>
   <string name="ssh_agent_forwarding">SSH 代理转发</string>
@@ -2633,7 +2673,14 @@ echo '$3' &gt;&gt; "$1/$2";</string>
   <string name="terminal_theme_font_size_label">字体大小</string>
   <string name="terminal_theme_theme_default_variant_title">默认</string>
   <string name="terminal_themes_font_size">文字大小</string>
-  <string name="terminal_url_popup_title">在浏览器中打开链接</string>
+  <string name="terminal_url_popup_copied">链接已复制</string>
+  <string name="terminal_url_popup_copy_other_machine">另一台机器上的文件。点击复制链接</string>
+  <string name="terminal_url_popup_copy_scheme">无法打开 %1$s 类型的链接。点击复制</string>
+  <string name="terminal_url_popup_copy_unknown">无法打开此链接。点击复制</string>
+  <string name="terminal_url_popup_copy_unverified_machine">未验证机器上的文件。点击复制</string>
+  <string name="terminal_url_popup_file_cannot_be_opened">无法通过链接打开本地文件</string>
+  <string name="terminal_url_popup_open_in_sftp">在 SFTP 中打开</string>
+  <string name="terminal_url_popup_title">打开链接</string>
   <string name="terminals_empty_title">无活动连接</string>
   <string name="termius">Termius</string>
   <string name="termius_blog_on_medium">Termius 博客</string>

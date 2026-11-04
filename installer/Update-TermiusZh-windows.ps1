@@ -24,7 +24,7 @@
 #   -Help             显示本说明
 #
 # 只下载与本机版本号严格对应的包；该版本未发布时直接报错，不会退到相近版本。
-# 只用系统自带的 Windows PowerShell 与 .NET，无需安装任何工具。
+# 只用系统自带的 Windows PowerShell、.NET 与 curl.exe（Win10 1803 起自带），无需安装任何工具。
 # 会替换 resources\app.asar，并在必要时关闭 Termius.exe 的 asar 完整性熔丝；
 # 不创建备份、不自动回滚。修改代码签名后内置自动更新可能不可用。
 
@@ -109,7 +109,6 @@ Write-Host ''
 # 控制台底部，重绘时会把上方含中文的行覆盖成残影（每个字看起来像画了两遍）。
 # 下载进度由 Save-FileWithProgress 自己输出，用户仍然能看到百分比。
 $ProgressPreference = 'SilentlyContinue'
-# -Help 打印脚本头部注释，然后直接退出，不碰任何文件。
 # -Help 打印脚本头部注释（到 param 之前为止），然后退出，不碰任何文件。
 if ($Help) {
   $inHeader = $true
@@ -212,7 +211,7 @@ if (-not (Test-Path -LiteralPath $asar -PathType Leaf)) { throw "找不到 app.a
 # ---- 版本 ----------------------------------------------------------------
 
 # 版本取自可执行文件的 ProductVersion，而不是更新源或可能已被替换过的 app.asar。
-# 默认取本机已安装的版本；用 -Version 显式指定时以指定值为准。
+# 默认取本机已安装的版本；用 -TargetVersion 显式指定时以指定值为准。
 $productVersion = (Get-Item -LiteralPath $exe).VersionInfo.ProductVersion
 if ($TargetVersion) {
   if ($TargetVersion -notmatch '^(\d+\.\d+\.\d+)$') {
@@ -221,11 +220,10 @@ if ($TargetVersion) {
   $version = $Matches[1]
 } else {
   if ($productVersion -notmatch '^(\d+\.\d+\.\d+)(?:\.0)?$') {
-      throw "无法识别 Termius 版本（$productVersion），请用 -Version 手动指定。"
+      throw "无法识别 Termius 版本（$productVersion），请用 -TargetVersion 手动指定。"
   }
   $version = $Matches[1]
 }
-# Beta 版的发布标签与文件名都多一个 -beta 后缀：
 # Beta 版的发布标签与文件名都多一个 -beta 后缀：
 #   标签 v10.3.0-beta，文件 app-windows-localize-beta.asar
 $betaSuffix = if ($Beta) { '-beta' } else { '' }
@@ -269,10 +267,14 @@ $assetUrl = "https://github.com/$Repo/releases/download/$tag/$assetName"
 Write-Host '正在获取汉化包校验信息…'
 # 旧版本的发布没有这个文件，取不到时为空，脚本回退到下载后直接安装。
 $sumsExpected = $null
+$assetPattern = [regex]::Escape($assetName)
 try {
   $sumsTxt = Invoke-WebRequest -Uri "https://github.com/$Repo/releases/download/$tag/SHA256SUMS-windows.txt" -UseBasicParsing -TimeoutSec 60 -ErrorAction Stop
-  $assetPattern = [regex]::Escape($assetName)
-  foreach ($line in ($sumsTxt.Content -split "`n")) {
+  # GitHub 以 application/octet-stream 返回该文件，PS 5.1 与 PS 7 的 .Content 都是 byte[]，
+  # 直接 -split 得到的是一串数字而不是文本行，必须先解码。
+  $sumsContent = $sumsTxt.Content
+  if ($sumsContent -is [byte[]]) { $sumsContent = [Text.Encoding]::UTF8.GetString($sumsContent) }
+  foreach ($line in ($sumsContent -split "`n")) {
       # 归一化：容忍二进制模式星号（Git Bash/MSYS2）与 CRLF 行尾。
       $line = $line.Trim() -replace ' \*', '  '
       if ($line -match "^([0-9a-f]{64})\s+$assetPattern\s*$") {
@@ -286,7 +288,6 @@ try {
 if (-not $sumsExpected) {
   try {
     $page = Invoke-WebRequest -Uri "https://github.com/$Repo/releases/expanded_assets/$tag" -UseBasicParsing -TimeoutSec 60 -ErrorAction Stop
-    $assetPattern = [regex]::Escape($assetName)
     if ($page.Content -match "digest for $assetPattern`".*?value=`"sha256:([0-9a-f]{64})`"") {
       $sumsExpected = $Matches[1]
     }
@@ -397,6 +398,44 @@ function Get-Sha256 {
 #     抛出「已中断」。主线程不被任何长调用阻塞，中断响应及时，
 #     TermiusZh.ConsoleSignal 回调使 PowerShell 本身不会被 Ctrl+C 杀掉；
 #   - 非终端（输出被重定向）时 curl 会自动隐藏进度条。
+#
+# 优先用 System32 下的系统 curl：PATH 里可能先命中 Git/Conda 带的 OpenSSL 版 curl。
+
+# Schannel 后端默认强制检查证书吊销，吊销服务器不可达时报
+# CRYPT_E_REVOCATION_OFFLINE (0x80092013)，curl 退出码 35。
+# 7.70.0+ 用 --ssl-revoke-best-effort：能查到吊销状态仍会拦截，查不到才放行；
+# 7.44.0+ 只能用 --ssl-no-revoke；更旧的版本不认识这些参数，传了会直接失败。
+function Get-CurlRevokeOption {
+  param([string]$CurlPath)
+
+  try {
+      $versionText = (& $CurlPath -V 2>$null) -join "`n"
+  } catch {
+      return @()
+  }
+  # 旧版 curl（如 Win10 1803 自带的 7.55.1）把 Schannel 后端显示为 WinSSL。
+  if ($versionText -notmatch '(?i)\b(Schannel|WinSSL)\b') { return @() }
+  if ($versionText -notmatch '(?m)^curl\s+(\d+)\.(\d+)\.(\d+)') { return @() }
+
+  $curlVersion = [version]('{0}.{1}.{2}' -f $Matches[1], $Matches[2], $Matches[3])
+  if ($curlVersion -ge [version]'7.70.0') { return @('--ssl-revoke-best-effort') }
+  if ($curlVersion -ge [version]'7.44.0') { return @('--ssl-no-revoke') }
+  return @()
+}
+
+# Start-Process -ArgumentList 只用空格拼接数组、不加引号：TEMP 路径含空格
+# （例如用户名 "John Smith"）时 curl 会把路径拆成多个参数。这里按 Windows
+# 命令行解析规则（CommandLineToArgvW）自己加引号：引号前的反斜杠要翻倍，
+# 结尾反斜杠也要翻倍，否则会把收尾引号转义掉。
+function ConvertTo-CommandLineArgument {
+  param([string]$Value)
+
+  if ($Value -and $Value -notmatch '[\s"]') { return $Value }
+  $escaped = [regex]::Replace($Value, '(\\*)"', { param($m) $m.Groups[1].Value * 2 + '\"' })
+  $escaped = [regex]::Replace($escaped, '(\\+)$', { param($m) $m.Groups[1].Value * 2 })
+  return '"' + $escaped + '"'
+}
+
 function Save-FileWithProgress {
    param(
        [string]$Url,
@@ -405,12 +444,20 @@ function Save-FileWithProgress {
 
    $interactive = -not [Console]::IsOutputRedirected
 
+   $curlExe = Join-Path $env:SystemRoot 'System32\curl.exe'
+   if (-not (Test-Path -LiteralPath $curlExe -PathType Leaf)) { $curlExe = 'curl.exe' }
+
    $curlArgs = @(
        '--fail', '--location', '--retry', '3', '-C', '-'
        '--connect-timeout', '20', '--speed-time', '60', '--speed-limit', '1024'
+   ) + @(Get-CurlRevokeOption -CurlPath $curlExe) + @(
        '--progress-bar', '--show-error', '--output', $Destination, $Url
    )
-   $curl = Start-Process -FilePath 'curl.exe' -ArgumentList $curlArgs -NoNewWindow -PassThru
+   $curlCommandLine = ($curlArgs | ForEach-Object { ConvertTo-CommandLineArgument $_ }) -join ' '
+   $curl = Start-Process -FilePath $curlExe -ArgumentList $curlCommandLine -NoNewWindow -PassThru
+   # Windows PowerShell 5.1 里，不带 -Wait 的 Start-Process 若没人提前取过进程句柄，
+   # 进程退出后 ExitCode 会是 $null，下面的失败判断就被跳过。先取一次句柄让它缓存下来。
+   $null = $curl.Handle
 
    try {
        while ($true) {
@@ -436,7 +483,10 @@ function Save-FileWithProgress {
   if ([TermiusZh.ConsoleSignal]::CtrlCPressed -ne 0) {
       throw '已手动中断（Ctrl+C）。已下载的部分已保留，下次运行将从断点继续。'
   }
-  if ($null -ne $curlExitCode -and $curlExitCode -ne 0) {
+  if ($null -eq $curlExitCode) {
+      throw '无法获取 curl 退出码，不能确认下载是否成功。'
+  }
+  if ($curlExitCode -ne 0) {
       throw "下载失败（curl 退出码 $curlExitCode）。"
   }
   if (-not (Test-Path -LiteralPath $Destination -PathType Leaf)) {
@@ -445,8 +495,7 @@ function Save-FileWithProgress {
 }
 # ---- 检查 -----------------------------------------------------------------
 
-
-Write-Host "正在检查 $ProcessName 是否运行…"
+Write-Host '正在检查本机文件…'
 
 $fuse = Get-AsarIntegrityFuse $exe
 
@@ -482,58 +531,127 @@ if (-not $Apply) {
 
 # ---- 下载 -----------------------------------------------------------------
 
-# ---- 下载 -----------------------------------------------------------------
-
 # 先下载，确认这个版本确实有对应汉化包，再动本地文件。
 # 本机 hash 与官方校验值一致时跳过下载，只按需关闭熔丝。
-# 下载临时文件按发布标签+资产名固定：中断后可续传，不同版本不会混用缓存。
+#
+# 下载临时文件名 = 发布标签 + 官方 hash 前 8 位 + 资产名。
+# curl -C - 续传只发 Range、不带 If-Range：维护者在同一标签下重传同名资产后，
+# 服务器照样返回 206，旧 .part 的前半段会和新包的后半段拼成一个长度正确、
+# 内容错误的文件。hash 进文件名后，重传会换一个文件名，旧片段不会再被续传。
+# 取不到官方 hash 时文件名不带 hash，且不续传（见下载分支）。
 $tempRoot = if ($env:TEMP) { $env:TEMP } else { [IO.Path]::GetTempPath() }
-$cacheFile = Join-Path $tempRoot ("termius-zh-" + $tag + "-" + $assetName + ".asar")
+$hashTag = if ($sumsExpected) { '-' + $sumsExpected.Substring(0, 8) } else { '' }
+$cacheFile = Join-Path $tempRoot ("termius-zh-$tag$hashTag-$assetName")
 $download = "$cacheFile.part"
 $stagedAsar = $null
 $stagedExe = $null
 $exeReplaced = $false
 $asarReplaced = $false
 
+# TEMP 里可能残留同名目录，或被重定向到别处的符号链接/联接点：
+# 不先清理，后面的移动、复制会以“拒绝访问”这类原始异常失败。
+function Remove-BlockingPath {
+  param([string]$Path)
+
+  if (-not (Test-Path -LiteralPath $Path)) { return }
+  $item = Get-Item -LiteralPath $Path -Force
+  if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+      # 只删链接本身，不跟随到目标目录（Remove-Item -Recurse 会跟进去）。
+      if ($item.PSIsContainer) { [IO.Directory]::Delete($Path, $false) }
+      else { [IO.File]::Delete($Path) }
+      return
+  }
+  if ($item.PSIsContainer) { Remove-Item -LiteralPath $Path -Recurse -Force }
+}
+
+# 成功后清理同一渠道的旧缓存与片段：旧版本、旧命名格式、被重传替换掉的 hash。
+# 正式版与 Beta 分开清理：Beta 文件名含 -beta-，两者可能同时安装、交替运行，
+# 互相删缓存会导致白下载，也可能删到另一个渠道正在写入的 .part。
+# 当前包的缓存保留，供重复运行或回退时复用。删除失败（文件被占用）就跳过。
+function Remove-StaleTermiusCache {
+  param([string]$Keep)
+
+  $isBetaFile = { param($name) $name -match '-beta[-.]' }
+  Get-ChildItem -LiteralPath $tempRoot -Filter 'termius-zh-*' -File -ErrorAction SilentlyContinue |
+      Where-Object { $_.FullName -ne $Keep -and (& $isBetaFile $_.Name) -eq [bool]$Beta } |
+      ForEach-Object { Remove-Item -LiteralPath $_.FullName -Force -ErrorAction SilentlyContinue }
+}
+
 try {
   if ($sameAsar) {
       $assetHash = $sumsExpected
   } else {
       $assetHash = $null
-      # 上次下载校验通过的完整包直接复用，不再联网。
+      # TEMP 路径被目录或链接占用时既不能当缓存也不能当下载目标，先清掉。
+      # 普通文件（可续传的 .part）不受影响。
+      Remove-BlockingPath $cacheFile
+      Remove-BlockingPath $download
+      # 上次下载校验通过的完整包直接复用，不再联网。缓存在 TEMP 里可能被损坏或替换，
+      # 取到官方校验值时必须重新比对；不一致就删掉重下。
       if ((Test-Path -LiteralPath $cacheFile -PathType Leaf) -and (Get-Item -LiteralPath $cacheFile).Length -gt 0) {
-          $assetHash = Get-Sha256 $cacheFile
-          if ($assetHash) { Write-Host '使用已缓存的汉化包，无需下载。' }
+          $cacheHash = Get-Sha256 $cacheFile
+          if ($sumsExpected -and $cacheHash -ne $sumsExpected) {
+              Write-Host '已缓存的汉化包与官方校验值不一致，删除后重新下载。'
+              Remove-Item -LiteralPath $cacheFile -Force
+          } else {
+              $assetHash = $cacheHash
+              # 后面按 $download 是否为空决定从 .part 还是缓存复制，复用缓存时必须清空。
+              $download = $null
+              Write-Host '使用已缓存的汉化包，无需下载。'
+          }
       }
       if (-not $assetHash) {
-          # .part 已有内容说明上次下载被中断，curl -C - 会从断点续传。
-          if ((Test-Path -LiteralPath $download -PathType Leaf) -and (Get-Item -LiteralPath $download).Length -gt 0) {
-              Write-Host ("发现未完成的下载（{0:N0} MB），将从断点续传…" -f [Math]::Floor((Get-Item -LiteralPath $download).Length / 1MB))
-          }
-          # 取文件总大小用于提示（HEAD 取不到时不影响下载）。
+          # 取文件总大小，用于提示和续传前的长度检查（HEAD 取不到时为 0，不影响下载）。
           $totalBytes = 0
           try {
               $head = Invoke-WebRequest -Uri $assetUrl -Method Head -UseBasicParsing -MaximumRedirection 5
               if ($head.Headers.ContainsKey('Content-Length')) {
-                  $totalBytes = [long]$head.Headers['Content-Length']
+                  # PS 5.1 返回字符串，PS 7 返回 string[]：取第一个元素，两者都能转换。
+                  $totalBytes = [long](@($head.Headers['Content-Length'])[0])
               }
           } catch {
           }
-          if ($totalBytes -gt 0) {
-              $totalMB = [Math]::Ceiling($totalBytes / 1MB)
-              Write-Host ("正在下载汉化包…（共 {0} MB）" -f $totalMB)
-          } else {
-              Write-Host '正在下载汉化包…'
+
+          $partLength = [long]0
+          if (Test-Path -LiteralPath $download -PathType Leaf) { $partLength = (Get-Item -LiteralPath $download).Length }
+          if ($partLength -gt 0 -and -not $sumsExpected) {
+              # 没有官方校验值就发现不了拼接出的坏文件，宁可从头下载。
+              Write-Host '该版本没有官方校验值，不续传，重新下载。'
+              Remove-Item -LiteralPath $download -Force
+              $partLength = 0
+          } elseif ($partLength -gt 0 -and $totalBytes -gt 0 -and $partLength -gt $totalBytes) {
+              Write-Host '未完成的下载比完整文件还大，删除后重新下载。'
+              Remove-Item -LiteralPath $download -Force
+              $partLength = 0
           }
-          Save-FileWithProgress -Url $assetUrl -Destination $download
+
+          if ($partLength -gt 0 -and $partLength -eq $totalBytes) {
+              # 上次已下完但没来得及转为缓存：不再调用 curl，直接进入校验。
+              Write-Host '发现已下载完整的文件，直接校验。'
+          } else {
+              if ($partLength -gt 0) {
+                  Write-Host ("发现未完成的下载（{0:N0} MB），将从断点续传…" -f [Math]::Floor($partLength / 1MB))
+              }
+              if ($totalBytes -gt 0) {
+                  $totalMB = [Math]::Ceiling($totalBytes / 1MB)
+                  Write-Host ("正在下载汉化包…（共 {0} MB）" -f $totalMB)
+              } else {
+                  Write-Host '正在下载汉化包…'
+              }
+              Save-FileWithProgress -Url $assetUrl -Destination $download
+          }
 
           $downloadLength = (Get-Item -LiteralPath $download).Length
+          # 校验失败的 .part 必须删除：curl -C - 对已满或超长的文件仍返回 0 且不改动它，
+          # 留着会让之后每次运行都续传到同一个坏文件，永远校验失败。
           if ($downloadLength -lt 1048576) {
-              throw "下载文件异常小（$downloadLength 字节），可能是错误页面。"
+              Remove-Item -LiteralPath $download -Force -ErrorAction SilentlyContinue
+              throw "下载文件异常小（$downloadLength 字节），可能是错误页面。已删除，请重新运行。"
           }
           $assetHash = Get-Sha256 $download
           if ($sumsExpected -and $assetHash -ne $sumsExpected) {
-              throw '下载文件与官方校验值不一致，已中止。'
+              Remove-Item -LiteralPath $download -Force -ErrorAction SilentlyContinue
+              throw '下载文件与官方校验值不一致，已删除，请重新运行。'
           }
           # 校验通过：转为完整缓存，供下次运行免下载复用。
           Move-Item -LiteralPath $download -Destination $cacheFile -Force
@@ -553,6 +671,7 @@ try {
   if ($sameAsar -and $fuse.State -eq $StateDisabled) {
       Write-Host '本机 app.asar 已是该汉化包，无需改动。'
       if ($download) { Remove-Item -LiteralPath $download -Force -ErrorAction SilentlyContinue }
+      Remove-StaleTermiusCache -Keep $cacheFile
       Wait-EnterIfInteractive
       exit 0
   }
@@ -604,6 +723,7 @@ Write-Host '正在替换 app.asar…'
   Write-Host "汉化完成，可以重新打开 $ProcessName。"
   Write-Warning '未保留备份，也无法自动回滚；如需还原请用官方安装包重装。修改代码签名后内置自动更新可能不可用。'
   if ($download) { Remove-Item -LiteralPath $download -Force -ErrorAction SilentlyContinue }
+  Remove-StaleTermiusCache -Keep $cacheFile
   Wait-EnterIfInteractive
   exit 0
 } catch {
@@ -612,7 +732,11 @@ Write-Host '正在替换 app.asar…'
   if ([TermiusZh.ConsoleSignal]::CtrlCPressed -ne 0) {
       $partMB = 0
       if ($download -and (Test-Path -LiteralPath $download -PathType Leaf)) { $partMB = (Get-Item -LiteralPath $download).Length / 1MB }
-      Write-Host ("提示：已手动中断（Ctrl+C）。下载片段（{0:N1} MB）已保留，重新运行可续传。" -f $partMB) -ForegroundColor Yellow
+      if ($sumsExpected) {
+          Write-Host ("提示：已手动中断（Ctrl+C）。下载片段（{0:N1} MB）已保留，重新运行可续传。" -f $partMB) -ForegroundColor Yellow
+      } else {
+          Write-Host '提示：已手动中断（Ctrl+C）。该版本没有官方校验值，重新运行会从头下载。' -ForegroundColor Yellow
+      }
   } elseif ($exeReplaced -or $asarReplaced) {
       Write-Host "错误：改动 Termius 文件后失败（exe=$exeReplaced, asar=$asarReplaced）：$($_.Exception.Message)" -ForegroundColor Red
       Write-Host '请关闭 Termius，必要时用官方安装包重装。' -ForegroundColor Red

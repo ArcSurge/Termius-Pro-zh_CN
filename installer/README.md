@@ -117,10 +117,13 @@ bash Update-TermiusZh-linux.sh --check
 ```batch
 .\Update-TermiusZh-windows-launcher.cmd -trial
 .\Update-TermiusZh-windows-launcher.cmd -skip
+.\Update-TermiusZh-windows-launcher.cmd -package ltk
 .\Update-TermiusZh-windows-launcher.cmd -check
 ```
 
-依次对应：汉化 + 试用、汉化 + 跳过登录、只看检查结果。
+依次对应：汉化 + 试用、汉化 + 跳过登录、汉化 + 试用 + 跳过登录（组合包）、只看检查结果。
+
+`-package` 后面跟简写（`l` / `t` / `k` 组合），也接受 `-package=ltk` 这种等号写法。
 
 ### macOS / Linux 怎么选
 
@@ -129,6 +132,7 @@ bash Update-TermiusZh-linux.sh --check
 ```bash
 bash Update-TermiusZh-macOS.command --trial     # 汉化 + 试用
 bash Update-TermiusZh-macOS.command --skip      # 汉化 + 跳过登录
+bash Update-TermiusZh-macOS.command --package ltk   # 汉化 + 试用 + 跳过登录（组合包，需上游已发布）
 bash Update-TermiusZh-macOS.command --check     # 只看检查结果，不改动任何东西
 ```
 
@@ -146,11 +150,23 @@ copy TermiusZh.conf.example TermiusZh.conf    # Windows（cmd）
 找到 `package` 那一行，可以用「简写」或「完整文件名」两种方式填写：
 
 ```ini
-package = ls                          # 简写：l=仅汉化，t=试用，s=跳过登录，可自由组合
+package = lk                          # 简写：l=汉化，t=试用，k=跳过登录，可自由组合
 package = app-windows-localize-trial.asar   # 完整文件名：原样使用
 ```
 
-**简写（推荐）**：用 `l` / `t` / `s` 表示功能，脚本会自动按你的平台和 Beta 拼出完整文件名。例如 `ls` 会拼成 `localize-skip`，`ts` 拼成 `trial-skip`。组合包是否存在取决于上游，没有时脚本会如实报错。
+**简写（推荐）**：用 `l` / `t` / `k` 表示功能，脚本会自动按你的平台和 Beta 拼出完整文件名。例如 `lk` 会拼成 `localize-skip`，`lt` 拼成 `localize-trial`，`ltk` 拼成 `localize-trial-skip`。字母顺序不影响结果，`kl` 与 `lk` 等价。组合包是否存在取决于上游，没有时脚本会如实报错。
+
+简写也可以直接写在命令行上，优先级最高（高于配置文件）：Windows 用 `-Package ltk`，Linux / macOS 用 `--package ltk` 或 `-p ltk`。
+
+短横线的数量各端不同，按你用的入口填：
+
+| 入口 | 试用 | 跳过登录 |
+|---|---|---|
+| Windows 双击的 `.cmd` | `-trial` | `-skip` |
+| Windows 直接跑 `.ps1` | `-Flavor trial` | `-Flavor skip` |
+| Linux / macOS | `--trial` | `--skip` |
+
+这些只是简写的别名，分别等价于 `t` 和 `k`。想同时要 trial + skip 只能用简写——这类开关一次只能指定一种功能，后写的会覆盖前面的。
 
 **完整文件名**：直接写 `.asar` 结尾的全名，脚本原样使用，适合上游以后出现的新组合包或老版本命名（例如 `app-windows.asar`）。
 
@@ -167,18 +183,27 @@ beta = yes
 **用完整文件名时，开头平台名必须与系统一致**：Windows 填 `app-windows…`，macOS 填 `app-macos…`，Linux 填 `app-linux…`。填错平台会被脚本拒绝——把别的平台的包装进去会让 Termius 打不开。简写则无需关心平台名，脚本会自动选对。
 
 配置文件里的注释把所有可选项都列出来了，照着填即可。
-> 注意：命令行参数（`-trial` / `--skip`）与配置文件**同时存在时，以命令行参数为准**，`package` / `beta` / `install_dir` 三项均是如此。
+> 注意：命令行参数与配置文件**同时存在时，以命令行参数为准**，`package` / `beta` / `install_dir` 三项均是如此。两边的包类型不一致时，脚本会打印一行提示告诉你配置里的 `package` 已被忽略，避免组合被静默丢掉。
 
 ### 重复运行不会重复下载
 
-脚本每次运行都会先取官方校验值（优先 `SHA256SUMS-<平台>.txt`，旧发布没有该文件时自动改从 GitHub 发布页解析），与本机已装的 `app.asar` 比对：
-一致就直接跳过下载，只有版本或包类型变化时才会重新下载约 160 MB 的完整包。
+脚本每次运行都会先取官方校验值，与本机已装的 `app.asar` 比对：一致就直接跳过下载，只有版本或包类型变化时才会重新下载约 160 MB 的完整包。
+
+校验值来自发布里的校验文件，各端请求的文件名不同（这是上游按构建机命名的既成事实）：
+
+| 平台 | 校验文件 |
+|---|---|
+| Windows | `SHA256SUMS-windows.txt` |
+| macOS | `SHA256SUMS-macos.txt` |
+| Linux | `SHA256SUMS-ubuntu.txt`（取不到时再试 `SHA256SUMS-linux.txt`） |
+
+旧发布没有这些文件时，脚本会自动改从 GitHub 发布页解析校验值。
 
 下载完成后还会核对下载内容的完整性，不一致直接报错退出。
 
-下载中断或网络失败时会保留已下载的部分；重新运行从断点续传。校验成功的完整包会缓存，下次运行免下载复用。不同版本/包使用不同缓存，不会互相拼接。
+下载中断或网络失败时会保留已下载的部分；重新运行从断点续传（**该版本没有官方校验值时例外**：无法判断拼接出的文件是否正确，会从头下载）。校验成功的完整包会缓存，下次运行免下载复用。不同版本/包使用不同缓存，不会互相拼接。
 
-> 注意：若发布既没有 `SHA256SUMS-<平台>.txt`、发布页也解析不到校验值，脚本会退回「下载后直接比对安装」的行为，不影响使用。
+> 注意：若发布既没有上述校验文件、发布页也解析不到校验值，脚本会退回「下载后直接比对安装」的行为，不影响使用。
 
 ---
 
@@ -279,10 +304,10 @@ Linux 下才会出现，说明系统缺 `curl` 一类的基础工具。按提示
 |---|---|---|---|
 | 只检查不改动 | `-check` | `-CheckOnly` | `--check` |
 | 仅汉化（默认） | 不加参数 | 不加参数 | 不加参数 |
-| 汉化 + 试用 | `-trial` | `-Flavor trial` | `--trial` |
-| 汉化 + 跳过登录 | `-skip` | `-Flavor skip` | `--skip` |
+| 汉化 + 试用 | `-trial` | `-Flavor trial` 或 `-Package t` | `--trial` 或 `--package t` |
+| 汉化 + 跳过登录 | `-skip` | `-Flavor skip` 或 `-Package k` | `--skip` 或 `--package k` |
 | 指定版本 | 不支持，用配置/改用 .ps1 | `-TargetVersion 9.43.1` | `--version 9.43.1` |
 | 指定安装位置 | 不支持，用配置/改用 .ps1 | `-InstallDir PATH` | `--dir PATH` / `--app PATH` |
 | 操作 Beta 版 | 改配置 `beta = yes` | `-Beta` 或改配置 | `--beta` 或改配置 |
-| 指定汉化包 | 改配置 `package` | 同左（三端共用一份配置） | 同左 |
+| 指定汉化包 | `-package ltk`，或改配置 | `-Package ltk`，或改配置 | `--package ltk`（`-p ltk`），或改配置 |
 | 查看全部说明 | 改用 .ps1 加 `-Help` | `-Help` | `--help` |

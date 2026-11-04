@@ -58,6 +58,7 @@ sed -n "s/^[[:space:]]*$key[[:space:]]*=[[:space:]]*//p" "$CONF_FILE" 2>/dev/nul
 
 DOWNLOAD=""
 CACHE_FILE=""
+sums_expected=""
 INTERRUPTED=0
 NEED_SUDO=0
 ASAR_WRITTEN=0
@@ -72,10 +73,22 @@ printf '错误：%s\n' "$1" >&2
 exit 1
 }
 
+# 字节数 -> "12.3 MB"。只用 shell 整数运算，不依赖 awk 的浮点格式化。
+mb_text() {
+mb_bytes=${1:-}
+case "$mb_bytes" in
+''|*[!0-9]*) printf '未知大小'; return 0 ;;
+esac
+mb_tenths=$(( (mb_bytes * 10 + 524288) / 1048576 ))
+printf '%s.%s MB' "$((mb_tenths / 10))" "$((mb_tenths % 10))"
+}
+
 
 say "Termius 汉化脚本"
 say ""
+# 中断后不再等回车，否则第二次 Ctrl+C 会卡在等待输入上。
 ask() {
+[ "${INTERRUPTED:-0}" -eq 0 ] || return 0
 if [ -t 0 ] && [ -t 1 ]; then
  printf '\n按回车键关闭此窗口…'
  read -r _ || true
@@ -92,9 +105,11 @@ rc=$?
 trap - EXIT INT TERM HUP
 if [ "$rc" -ne 0 ]; then
 if [ "$INTERRUPTED" -eq 1 ]; then
-if [ -n "$DOWNLOAD" ] && [ -s "$DOWNLOAD" ]; then
+if [ -n "$DOWNLOAD" ] && [ -s "$DOWNLOAD" ] && [ -z "$sums_expected" ]; then
+  printf '提示：已手动中断（Ctrl+C）。该版本没有官方校验值，重新运行会从头下载。\n' >&2
+elif [ -n "$DOWNLOAD" ] && [ -s "$DOWNLOAD" ]; then
   partial_size=$(wc -c < "$DOWNLOAD" | tr -d ' ')
-  printf '提示：已手动中断（Ctrl+C）。下载片段（%s MB）已保留，重新运行可续传。\n' "$(awk "BEGIN{printf \"%.1f\", $partial_size / 1048576}")" >&2
+  printf '提示：已手动中断（Ctrl+C）。下载片段（%s）已保留，重新运行可续传。\n' "$(mb_text "$partial_size")" >&2
 else
   printf '提示：已手动中断（Ctrl+C）。\n' >&2
 fi
@@ -278,26 +293,32 @@ asset_url="https://github.com/$REPO/releases/download/$tag/$asset"
 
 say "正在获取汉化包校验信息…"
 # 优先 SHA256SUMS 文件；旧 release 没有，回退解析 release 资产页的 sha256 徽标。
+# 发布流程按构建机命名校验文件，Linux 包对应的是 SHA256SUMS-ubuntu.txt；
+# 也兼容 SHA256SUMS-linux.txt，以防发布流程以后改名。
 sums_expected=""
+for sums_name in SHA256SUMS-ubuntu.txt SHA256SUMS-linux.txt; do
 sums_txt=$(curl -sfL --retry 2 --connect-timeout 20 --max-time 60 \
-"https://github.com/$REPO/releases/download/$tag/SHA256SUMS-linux.txt" 2>/dev/null || true)
-if [ -n "$sums_txt" ]; then
+"https://github.com/$REPO/releases/download/$tag/$sums_name" 2>/dev/null || true)
+[ -n "$sums_txt" ] || continue
 sums_expected=$(printf '%s\n' "$sums_txt" | sed 's/ \*/  /; s/[[:space:]]*$//' \
 | grep "  $asset\$" | head -n 1 | cut -d ' ' -f 1 || true)
-case "$sums_expected" in
-[0-9a-f]*) ;;
-*) sums_expected="" ;;
-esac
-fi
+[ -z "$sums_expected" ] || break
+done
 if [ -z "$sums_expected" ]; then
 sums_page=$(curl -sfL --retry 2 --connect-timeout 20 --max-time 60 \
 "https://github.com/$REPO/releases/expanded_assets/$tag" 2>/dev/null || true)
 if [ -n "$sums_page" ]; then
-sums_expected=$(printf '%s' "$sums_page" | tr '\n' ' ' | sed 's/<clipboard-copy/\n&/g' \
+# 每个资产一行再匹配；用 awk 断行，sed 替换串里的 \n 不是所有实现都支持。
+sums_expected=$(printf '%s' "$sums_page" | tr '\n' ' ' | awk '{ gsub(/<clipboard-copy/, "\n&"); print }' \
 | sed -n 's/.*digest for \([^"]*\.asar\)".*value="sha256:\([0-9a-f]\{64\}\)".*/\2  \1/p' \
 | grep "  $asset\$" | head -n 1 | cut -d ' ' -f 1 || true)
 fi
 fi
+# 只接受 64 位小写十六进制；错误页或格式变化一律当作没有校验值。
+case "$sums_expected" in
+*[!0-9a-f]*) sums_expected="" ;;
+esac
+[ "${#sums_expected}" -eq 64 ] || sums_expected=""
 
 # ---- helpers ---------------------------------------------------------------
 
@@ -442,38 +463,107 @@ fi
 
 # ---- download --------------------------------------------------------------
 
+# 下载临时文件名 = 发布标签 + 官方 hash 前 8 位 + 资产名。
+# curl --continue-at 续传只发 Range、不带 If-Range：维护者在同一标签下重传同名资产后，
+# 服务器照样返回 206，旧 .part 的前半段会和新包的后半段拼成一个长度正确、
+# 内容错误的文件。hash 进文件名后，重传会换一个文件名，旧片段不会再被续传。
+# 取不到官方 hash 时文件名不带 hash，且不续传（见下面的下载分支）。
+cache_dir=${TMPDIR:-/tmp}
+cache_dir=${cache_dir%/}
+hash_tag=""
+[ -z "$sums_expected" ] || hash_tag="-$(printf '%s' "$sums_expected" | cut -c 1-8)"
+CACHE_FILE="$cache_dir/termius-zh-$tag$hash_tag-$asset"
+
+# 成功后清理同一渠道的旧缓存与片段：旧版本、旧命名格式、被重传替换掉的 hash。
+# 正式版与 Beta 分开清理（Beta 文件名含 -beta- 或 -beta.），两者可能交替运行。
+# 只删当前用户自己的文件：/tmp 是多用户共享的，以 root 运行时不能碰别人的文件。
+remove_stale_cache() {
+keep=${1##*/}
+for f in "$cache_dir"/termius-zh-*; do
+[ -f "$f" ] && [ -O "$f" ] || continue
+name=${f##*/}
+[ "$name" != "$keep" ] || continue
+case "$name" in
+*-beta-*|*-beta.*) is_beta=1 ;;
+*) is_beta=0 ;;
+esac
+[ "$is_beta" -eq "$BETA" ] || continue
+rm -f -- "$f" 2>/dev/null || true
+done
+return 0
+}
+
 if [ "$skip_download" -eq 1 ]; then
 asset_hash=$sums_expected
 else
-cache_key=$(printf '%s' "$asset_url" | sha256sum | cut -d ' ' -f 1)
-CACHE_FILE="${TMPDIR:-/tmp}/termius-zh-$cache_key.asar"
 DOWNLOAD="$CACHE_FILE.part"
 asset_hash=""
+# /tmp 多用户共享，文件名可预测：别人预先放好的同名文件或符号链接，
+# 不能当作缓存或续传片段（没有官方校验值时会被原样装进 Termius）。
+for f in "$CACHE_FILE" "$DOWNLOAD"; do
+if [ -d "$f" ]; then
+# 被目录占用：不是缓存，rm -f 删不掉，不处理会在后面直接失败退出。
+rm -rf -- "$f" 2>/dev/null || die "临时路径被目录占用，且无法删除：$f"
+elif [ -L "$f" ] || { [ -e "$f" ] && [ ! -O "$f" ]; }; then
+rm -f -- "$f" 2>/dev/null || die "临时文件不属于当前用户，且无法删除：$f"
+fi
+done
+# 缓存在共享的 /tmp 里可能被损坏或替换：取到官方校验值时必须重新比对。
 if [ -s "$CACHE_FILE" ]; then
-asset_hash=$(sha256 "$CACHE_FILE")
-if [ -n "$asset_hash" ]; then
+cache_hash=$(sha256 "$CACHE_FILE")
+if [ -n "$sums_expected" ] && [ "$cache_hash" != "$sums_expected" ]; then
+say "已缓存的汉化包与官方校验值不一致，删除后重新下载。"
+rm -f -- "$CACHE_FILE"
+elif [ -n "$cache_hash" ]; then
+asset_hash=$cache_hash
+DOWNLOAD=""
 say "使用已缓存的汉化包，无需下载。"
 fi
 fi
 if [ -z "$asset_hash" ]; then
-if [ -s "$DOWNLOAD" ]; then
-partial_size=$(wc -c < "$DOWNLOAD" | tr -d ' ')
-say "发现未完成的下载（$(awk "BEGIN{printf \"%.1f\", $partial_size / 1048576}") MB），将从断点续传…"
+# 取文件总大小，用于提示和续传前的长度检查（HEAD 取不到时为 0，不影响下载）。
+total_bytes=$(curl -sSL -I --max-time 30 "$asset_url" 2>/dev/null \
+| grep -i '^[[:space:]]*content-length:' | tail -n 1 | tr -d '\r' | awk '{print $2}' || true)
+case "$total_bytes" in
+''|*[!0-9]*) total_bytes=0 ;;
+esac
+
+partial_size=0
+[ ! -s "$DOWNLOAD" ] || partial_size=$(wc -c < "$DOWNLOAD" | tr -d ' ')
+if [ "$partial_size" -gt 0 ] && [ -z "$sums_expected" ]; then
+# 没有官方校验值就发现不了拼接出的坏文件，宁可从头下载。
+say "该版本没有官方校验值，不续传，重新下载。"
+rm -f -- "$DOWNLOAD"
+partial_size=0
+elif [ "$partial_size" -gt 0 ] && [ "$total_bytes" -gt 0 ] && [ "$partial_size" -gt "$total_bytes" ]; then
+say "未完成的下载比完整文件还大，删除后重新下载。"
+rm -f -- "$DOWNLOAD"
+partial_size=0
 fi
 
-total_bytes=$(curl -sSL -I --max-time 30 "$asset_url" 2>/dev/null \
-| grep -i '^[[:space:]]*content-length:' | tail -n 1 | tr -d '\r' | awk '{print $2}')
-if [ -n "$total_bytes" ] && [ "$total_bytes" -gt 0 ] 2>/dev/null; then
+if [ "$partial_size" -gt 0 ] && [ "$partial_size" -eq "$total_bytes" ]; then
+# 上次已下完但没来得及转为缓存：不再调用 curl，直接进入校验。
+say "发现已下载完整的文件，直接校验。"
+else
+if [ "$partial_size" -gt 0 ]; then
+say "发现未完成的下载（$(mb_text "$partial_size")），将从断点续传…"
+fi
+if [ "$total_bytes" -gt 0 ]; then
 total_mb=$(( (total_bytes + 524287) / 1048576 ))
 say "正在下载汉化包…（共 ${total_mb} MB）"
 else
 say "正在下载汉化包…"
 fi
-
+if [ -n "$sums_expected" ]; then
+retry_hint="未完成部分已保留，可重试续传。"
+else
+retry_hint="请重试。"
+fi
 curl -fL --retry 3 --continue-at - --connect-timeout 20 \
 --speed-time 60 --speed-limit 1024 --progress-bar \
 -o "$DOWNLOAD" "$asset_url" \
-|| die "下载失败：该版本可能尚无对应汉化包，或网络不可用。未完成部分已保留，可重试续传。"
+|| die "下载失败：该版本可能尚无对应汉化包，或网络不可用。$retry_hint"
+fi
 
 [ -s "$DOWNLOAD" ] || { rm -f "$DOWNLOAD"; die "下载文件为空。"; }
 size=$(wc -c < "$DOWNLOAD" | tr -d ' ')
@@ -499,6 +589,7 @@ same_asar=1
 fi
 if [ "$same_asar" -eq 1 ] && [ "$fuse_state" != "49" ]; then
 say "本机 app.asar 已是该汉化包，无需改动。"
+remove_stale_cache "$CACHE_FILE"
 exit 0
 fi
 
@@ -557,8 +648,7 @@ if [ "$(byte_at "$EXE" "$fuse_at")" = 49 ]; then
 die "写入后校验熔丝失败，asar 完整性仍是开启状态。"
 fi
 
-if [ "$skip_download" -ne 1 ]; then
-rm -f "$DOWNLOAD"
-fi
+[ -z "$DOWNLOAD" ] || rm -f -- "$DOWNLOAD"
+remove_stale_cache "$CACHE_FILE"
 say "汉化完成，可以重新打开 ${APP_LABEL}。"
 say "未保留备份，也无法自动回滚；如需还原请用官方安装包重装。"

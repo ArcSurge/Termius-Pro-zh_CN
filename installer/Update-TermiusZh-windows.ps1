@@ -1,10 +1,11 @@
 ﻿# Windows Termius 汉化脚本（自动匹配已安装版本）。
 #
 # 用法：
-#   Update-TermiusZh-windows.cmd                 双击运行：检查后汉化（默认 localize 包）
-#   Update-TermiusZh-windows.cmd -check          只检查，不改动任何文件
-#   Update-TermiusZh-windows.cmd -trial          用「汉化 + 试用」包
-#   Update-TermiusZh-windows.cmd -skip           用「汉化 + 跳过登录」包
+#   Update-TermiusZh-windows-launcher.cmd              双击运行：检查后汉化（默认 localize 包）
+#   Update-TermiusZh-windows-launcher.cmd -check       只检查，不改动任何文件
+#   Update-TermiusZh-windows-launcher.cmd -trial       用「汉化 + 试用」包
+#   Update-TermiusZh-windows-launcher.cmd -skip        用「汉化 + 跳过登录」包
+#   Update-TermiusZh-windows-launcher.cmd -package ltk 用简写指定组合包（trial + skip）
 #
 #   powershell -ExecutionPolicy Bypass -File .\Update-TermiusZh-windows.ps1 -Apply
 #   powershell -ExecutionPolicy Bypass -File .\Update-TermiusZh-windows.ps1 -TargetVersion 9.43.1
@@ -19,6 +20,8 @@
 #                       skip      汉化 + 跳过登录（离线可用）
 #   -TargetVersion <x.y.z>  指定版本，默认取本机已安装 Termius 的版本号。
 #                     仅在自动识别失败，或想装与当前不同版本的包时才需要。
+#   -Package <简写>   用 l/t/k 简写指定组合包，优先级高于 -Flavor，
+#                     也覆盖配置文件里的 package。例如 ltk 表示 trial + skip。
 #   -InstallDir       指定 Termius 安装目录，默认 %LOCALAPPDATA%\Programs\Termius
 #   -Beta             操作 Termius Beta
 #   -Help             显示本说明
@@ -36,6 +39,7 @@ param(
   [switch]$Help,
   [ValidateSet('localize', 'trial', 'skip')]
   [string]$Flavor = 'localize',
+  [string]$Package,
   [string]$TargetVersion,
   [string]$InstallDir
 )
@@ -149,6 +153,16 @@ $StateDisabled = [byte][char]'0'
 if ($Apply -and $CheckOnly) { throw '请只使用 -Apply 或 -CheckOnly 之一。' }
 if ($env:OS -ne 'Windows_NT') { throw '本脚本仅支持 Windows。' }
 
+# 包类型只有一个来源：$Package（简写）。-Flavor 只是把 trial/skip 换算成 t/k 的别名，
+# 与 Linux/macOS 归一化到同一条路径，下面不再单独处理 Flavor。
+$packageSource = if ($Package) { "-Package $Package" } else { '' }
+if (-not $Package) {
+  switch ($Flavor) {
+      'trial' { $Package = 't'; $packageSource = '-Flavor trial' }
+      'skip' { $Package = 'k'; $packageSource = '-Flavor skip' }
+  }
+}
+
 $ProcessName = if ($Beta) { 'Termius Beta' } else { 'Termius' }
 $ExeName = if ($Beta) { 'Termius Beta.exe' } else { 'Termius.exe' }
 
@@ -229,41 +243,46 @@ if ($TargetVersion) {
 $betaSuffix = if ($Beta) { '-beta' } else { '' }
 $tag = "v$version$betaSuffix"
 
-# 配置文件的 package 非空时：以 .asar 结尾按完整文件名原样使用；否则按 l/t/s 简写自动拼接。
-$confPackage = if ($Flavor -eq 'localize') { Read-ConfValue 'package' } else { $null }
-if ($confPackage) {
-  if ($confPackage -match '\.asar$') {
+# package 非空时：以 .asar 结尾按完整文件名原样使用；否则按 l/t/k 简写自动拼接。
+# $Package 已把 -Package 与 -Flavor 归一化，这里只有这一个来源。
+$confPackageRaw = Read-ConfValue 'package'
+$assetSource = if ($Package) { $Package } else { $confPackageRaw }
+if ($assetSource) {
+  if ($assetSource -match '\.asar$') {
       # 完整文件名：原样使用，但要校验平台与 Beta 后缀。
-      if ($confPackage -match '^app-(macos|linux)') {
-          throw "配置文件里的 package 是其它平台的包（$confPackage），Windows 应使用 app-windows 开头的文件名。"
+      if ($assetSource -match '^app-(macos|linux)') {
+          throw "package 是其它平台的包（$assetSource），Windows 应使用 app-windows 开头的文件名。"
       }
-      if ($Beta -and $confPackage -notmatch '\-beta\.asar$') {
-          throw "配置文件里的 package 是正式版文件名（$confPackage），但已启用 Beta。Beta 版文件名应以 -beta.asar 结尾，例如 app-windows-localize-beta.asar。"
+      if ($Beta -and $assetSource -notmatch '\-beta\.asar$') {
+          throw "package 是正式版文件名（$assetSource），但已启用 Beta。Beta 版文件名应以 -beta.asar 结尾，例如 app-windows-localize-beta.asar。"
       }
-      if (-not $Beta -and $confPackage -match '\-beta\.asar$') {
-          throw "配置文件里的 package 是 Beta 版文件名（$confPackage），但未启用 Beta。请在配置里设 beta = yes 或用 -Beta，或改用正式版文件名。"
+      if (-not $Beta -and $assetSource -match '\-beta\.asar$') {
+          throw "package 是 Beta 版文件名（$assetSource），但未启用 Beta。请在配置里设 beta = yes 或用 -Beta，或改用正式版文件名。"
       }
-      $assetName = $confPackage
+      $assetName = $assetSource
   } else {
-      # 简写：l/t/s 字母组合，自动按平台和 Beta 拼全名。
-      if ($confPackage -notmatch '^[lts]+$') {
-          throw "配置文件里的 package 简写只能用 l / t / s 字母组合，当前为：$confPackage"
+      # 简写沿用上游 lang.py 的参数名：l=汉化，t=试用，k=跳过登录，可自由组合。
+      # 上游拼名规则是 app-<平台>-<按组合顺序的功能>.asar，且默认组合（l / lk / lt）
+      # 都以 localize 开头：localize-trial、localize-skip。因此这里忽略 l 的书写顺序，
+      # 统一拼成 localize[-trial][-skip]，与线上资产名一致。
+      if ($assetSource -notmatch '^[ltk]+$') {
+          throw "package 简写只能用 l / t / k 字母组合（l=汉化，t=试用，k=跳过登录），当前为：$assetSource"
       }
-      $suffix = ''
-      if ($confPackage -match 'l') { $suffix += '-localize' }
-      if ($confPackage -match 't') { $suffix += '-trial' }
-      if ($confPackage -match 's') { $suffix += '-skip' }
+      $suffix = '-localize'
+      if ($assetSource -match 't') { $suffix += '-trial' }
+      if ($assetSource -match 'k') { $suffix += '-skip' }
       $assetName = "app-windows$suffix$betaSuffix.asar"
   }
 } else {
-  # 官方资源命名规则：localize 无后缀，另两种为 localize-trial / localize-skip，
-  # Beta 版再统一追加 -beta。
-  $flavorSuffix = if ($Flavor -eq 'localize') { '' } else { "-$Flavor" }
-  $assetName = "app-windows-localize$flavorSuffix$betaSuffix.asar"
+  $assetName = "app-windows-localize$betaSuffix.asar"
 }
 $assetUrl = "https://github.com/$Repo/releases/download/$tag/$assetName"
 
-
+# 覆盖关系提示：命令行给了简写就忽略配置，命名不同才提示，避免每次运行都刷一行。
+if ($Package -and $confPackageRaw -and $Package -ne $confPackageRaw) {
+  $src = if ($packageSource) { $packageSource } else { "-Package $Package" }
+  Write-Host "提示：命令行 $src 优先，配置里的 package = $confPackageRaw 已被忽略。"
+}
 Write-Host '正在获取汉化包校验信息…'
 # 旧版本的发布没有这个文件，取不到时为空，脚本回退到下载后直接安装。
 $sumsExpected = $null

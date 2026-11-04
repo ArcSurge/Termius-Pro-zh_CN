@@ -6,6 +6,7 @@
 #   bash Update-TermiusZh-linux.sh --check           只检查，不改动文件
 #   bash Update-TermiusZh-linux.sh --trial           用「汉化 + 试用」包
 #   bash Update-TermiusZh-linux.sh --skip            用「汉化 + 跳过登录」包
+#   bash Update-TermiusZh-linux.sh --package ltk     用简写指定组合包（trial + skip）
 #   bash Update-TermiusZh-linux.sh --version X.Y.Z   指定版本，默认取已装版本
 #   bash Update-TermiusZh-linux.sh --dir PATH        指定安装目录
 #   bash Update-TermiusZh-linux.sh --beta            操作 Termius Beta
@@ -14,7 +15,9 @@
 #   --check            只检查版本、链接与熔丝状态，不改动任何文件
 #   --trial            汉化包类型：trial，汉化 + 试用（去掉 Upgrade now 等按钮）
 #   --skip             汉化包类型：skip，汉化 + 跳过登录（离线可用）
-#                      不带 --trial / --skip 时使用 localize，即仅汉化
+#                      不带 --trial / --skip / --package 时使用 localize，即仅汉化
+#   --package <简写>   用 l/t/k 简写指定组合包，优先级高于 --trial / --skip，
+#                      也覆盖配置文件里的 package。例如 ltk 表示 trial + skip。
 #   --version <x.y.z>  指定版本，默认取本机已安装 Termius 的版本号。
 #                      仅在自动识别失败，或想装与当前不同版本的包时才需要。
 #   --dir <路径>       指定安装目录，默认 /opt/Termius（Beta 为 /opt/Termius Beta）
@@ -37,8 +40,8 @@ FUSE_INDEX=4
 
 CHECK_ONLY=0
 BETA=0
-FLAVOR="localize"
-FLAVOR_SUFFIX=""
+# 包类型只有一个来源：CLI_PACKAGE（命令行简写）或 CONF_PACKAGE（配置）。
+# --trial / --skip 只是把 -trial / -skip 换算成简写 t / k，不再单独维护状态。
 INSTALL_DIR=""
 FORCE_VERSION=""
 PKG_NAME="termius-app"
@@ -59,6 +62,8 @@ sed -n "s/^[[:space:]]*$key[[:space:]]*=[[:space:]]*//p" "$CONF_FILE" 2>/dev/nul
 DOWNLOAD=""
 CACHE_FILE=""
 sums_expected=""
+CLI_PACKAGE=""
+CLI_PACKAGE_SRC=""
 INTERRUPTED=0
 NEED_SUDO=0
 ASAR_WRITTEN=0
@@ -142,14 +147,18 @@ fi
 while [ $# -gt 0 ]; do
 case "$1" in
 --check|--check-only|-c|--dry-run) CHECK_ONLY=1 ;;
---trial) FLAVOR="trial"; FLAVOR_SUFFIX="-trial" ;;
---skip) FLAVOR="skip"; FLAVOR_SUFFIX="-skip" ;;
+--trial) CLI_PACKAGE="t"; CLI_PACKAGE_SRC="--trial" ;;
+--skip) CLI_PACKAGE="k"; CLI_PACKAGE_SRC="--skip" ;;
+--package) shift; [ $# -gt 0 ] || die "--package 需要一个简写（l / t / k 组合）"; CLI_PACKAGE=$1; CLI_PACKAGE_SRC="--package $1" ;;
+--package=*) CLI_PACKAGE=${1#--package=}; CLI_PACKAGE_SRC="--package ${1#--package=}" ;;
+-p) shift; [ $# -gt 0 ] || die "-p 需要一个简写（l / t / k 组合）"; CLI_PACKAGE=$1; CLI_PACKAGE_SRC="-p $1" ;;
+-p=*) CLI_PACKAGE=${1#-p=}; CLI_PACKAGE_SRC="-p ${1#-p=}" ;;
 --beta|-b) BETA=1; PKG_NAME="termius-beta"; EXE_NAME="termius-beta" ;;
 --version) shift; [ $# -gt 0 ] || die "--version 需要一个版本号"; FORCE_VERSION=$1 ;;
 --version=*) FORCE_VERSION=${1#--version=} ;;
 --dir) shift; [ $# -gt 0 ] || die "--dir 需要一个路径"; INSTALL_DIR=$1 ;;
 --dir=*) INSTALL_DIR=${1#--dir=} ;;
--h|--help) sed -n '2,26p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+-h|--help) sed -n '2,28p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
 -*) die "未知参数：$1" ;;
 *) [ -z "$INSTALL_DIR" ] || die "多余参数：$1"; INSTALL_DIR=$1 ;;
 esac
@@ -180,6 +189,13 @@ fi
 # 命令行 --dir 优先，其次配置文件 install_dir。
 if [ -z "$INSTALL_DIR" ] && [ -n "$CONF_INSTALL_DIR" ]; then
 INSTALL_DIR="$CONF_INSTALL_DIR"
+fi
+
+# 命令行 --package 最优先：它给出完整的 l/t/k 组合，能表达 --trial / --skip
+# 单独做不到的 trial + skip。给了它就等价于读到一个配置 package。
+ORIG_CONF_PACKAGE=$CONF_PACKAGE
+if [ -n "$CLI_PACKAGE" ]; then
+CONF_PACKAGE="$CLI_PACKAGE"
 fi
 
 # ---- locate the installation ----------------------------------------------
@@ -248,48 +264,61 @@ esac
 
 tag="v$version$BETA_SUFFIX"
 
-if [ -z "$FLAVOR_SUFFIX" ] && [ -n "$CONF_PACKAGE" ]; then
-case "$CONF_PACKAGE" in
+# 包类型只有一个来源：CLI_PACKAGE（--package / --trial / --skip 归一化后的简写）
+# 或 CONF_PACKAGE（配置文件）。CLI_PACKAGE 优先，两者择一后走同一套拼名逻辑。
+if [ -n "$CLI_PACKAGE" ]; then
+asset_source="$CLI_PACKAGE"
+else
+asset_source="$CONF_PACKAGE"
+fi
+
+if [ -n "$asset_source" ]; then
+case "$asset_source" in
 *.asar)
 # 完整文件名：原样使用，但要校验平台与 Beta 后缀。
-case "$CONF_PACKAGE" in
+case "$asset_source" in
   app-linux*) ;;
   app-windows*|app-macos*)
-    die "配置文件里的 package 是其它平台的包（${CONF_PACKAGE}），Linux 应使用 app-linux 开头的文件名。" ;;
+    die "package 是其它平台的包（${asset_source}），Linux 应使用 app-linux 开头的文件名。" ;;
 esac
-case "$CONF_PACKAGE" in
+case "$asset_source" in
   *-beta.asar)
-    [ "$BETA" -eq 1 ] || die "配置文件里的 package 是 Beta 版文件名（${CONF_PACKAGE}），但未启用 Beta。请在配置里设 beta = yes 或用 --beta，或改用正式版文件名。"
+    [ "$BETA" -eq 1 ] || die "package 是 Beta 版文件名（${asset_source}），但未启用 Beta。请在配置里设 beta = yes 或用 --beta，或改用正式版文件名。"
     ;;
   *)
-    [ "$BETA" -ne 1 ] || die "配置文件里的 package 是正式版文件名（${CONF_PACKAGE}），但已启用 Beta。Beta 版文件名应以 -beta.asar 结尾，例如 app-linux-localize-beta.asar。"
+    [ "$BETA" -ne 1 ] || die "package 是正式版文件名（${asset_source}），但已启用 Beta。Beta 版文件名应以 -beta.asar 结尾，例如 app-linux-localize-beta.asar。"
     ;;
 esac
-asset="$CONF_PACKAGE"
+asset="$asset_source"
 ;;
 *)
-# 简写：l/t/s 字母组合，自动按平台和 Beta 拼全名。
-case "$CONF_PACKAGE" in
-  *[!lts]*)
-    die "配置文件里的 package 简写只能用 l / t / s 字母组合，当前为：$CONF_PACKAGE" ;;
+# 简写沿用上游 lang.py 的参数名：l=汉化，t=试用，k=跳过登录，可自由组合。
+# 上游拼名规则是 app-<平台>-<按组合顺序的功能>.asar，且默认组合（l / lk / lt）
+# 都以 localize 开头：localize-trial、localize-skip。因此这里忽略 l 的书写顺序，
+# 统一拼成 localize[-trial][-skip]，与线上资产名一致。
+case "$asset_source" in
+  *[!ltk]*)
+    die "package 简写只能用 l / t / k 字母组合（l=汉化，t=试用，k=跳过登录），当前为：$asset_source" ;;
 esac
-suffix=""
-case "$CONF_PACKAGE" in
-  *l*) suffix="${suffix}-localize" ;;
+suffix="-localize"
+case "$asset_source" in
+  *t*) suffix="$suffix-trial" ;;
 esac
-case "$CONF_PACKAGE" in
-  *t*) suffix="${suffix}-trial" ;;
+case "$asset_source" in
+  *k*) suffix="$suffix-skip" ;;
 esac
-case "$CONF_PACKAGE" in
-  *s*) suffix="${suffix}-skip" ;;
-esac
-asset="app-linux${suffix}${BETA_SUFFIX}.asar"
+asset="app-linux$suffix${BETA_SUFFIX}.asar"
 ;;
 esac
 else
-asset="app-linux-localize${FLAVOR_SUFFIX}${BETA_SUFFIX}.asar"
+asset="app-linux-localize${BETA_SUFFIX}.asar"
 fi
 asset_url="https://github.com/$REPO/releases/download/$tag/$asset"
+
+# 覆盖关系提示：命令行给了简写就忽略配置，命名不同才提示，避免每次运行都刷一行。
+if [ -n "$CLI_PACKAGE" ] && [ -n "$ORIG_CONF_PACKAGE" ] && [ "$CLI_PACKAGE" != "$ORIG_CONF_PACKAGE" ]; then
+say "提示：命令行 ${CLI_PACKAGE_SRC:---package $CLI_PACKAGE} 优先，配置里的 package = $ORIG_CONF_PACKAGE 已被忽略。"
+fi
 
 say "正在获取汉化包校验信息…"
 # 优先 SHA256SUMS 文件；旧 release 没有，回退解析 release 资产页的 sha256 徽标。

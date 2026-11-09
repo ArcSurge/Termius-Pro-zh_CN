@@ -61,26 +61,32 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
-          release_url="https://api.github.com/repos/${{ github.repository }}/releases"
+          release_url="https://api.github.com/repos/${{ github.repository }}/releases?per_page=100"
           response=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github+json" "$release_url") || { 
             echo "::error::Failed to fetch releases from GitHub API"
             exit 1
           }
-          echo "::debug::GitHub API response: $(jq -c . <<< "$response")"
-          github_tag_raw=$(echo "$response" | jq -r '.[] | select(.draft == false) | .tag_name' | head -1)
-          if [ -z "$github_tag_raw" ]; then
+          if ! jq -e 'type == "array"' <<< "$response" > /dev/null 2>&1; then
+            echo "::error::Unexpected GitHub API response: $(echo "$response" | head -c 300)"
+            exit 1
+          fi
+          echo "::debug::Releases received: $(jq 'length' <<< "$response")"
+          tags=$(jq -r '.[] | select(.draft == false and .tag_name != null) | .tag_name' <<< "$response" | sed -E 's/^v//; s/[-+].*$//' | grep -E '^[0-9]+(\.[0-9]+)*$' || true)
+          official_tags=$(jq -r '.[] | select(.draft == false and .prerelease == false and .tag_name != null) | .tag_name' <<< "$response" | sed -E 's/^v//; s/[-+].*$//' | grep -E '^[0-9]+(\.[0-9]+)*$' || true)
+          echo "::debug::Version tags: $(echo "$tags" | tr '\n' ' ')"
+          github_version=$(echo "$tags" | sort -V | tail -n1)
+          if [ -z "$github_version" ]; then
             github_version="0.0.0"
-            github_tag_raw="v0.0.0"
             is_prerelease="false"
             echo "⚠ No releases found, using default version: v0.0.0"
+          elif echo "$official_tags" | grep -qxF -- "$github_version"; then
+            is_prerelease="false"
           else
-            github_version=$(echo "$github_tag_raw" | sed 's/^v//')
-            is_prerelease=$(echo "$github_tag_raw" | grep -q -- "-beta$" && echo "true" || echo "false")
-            echo "✓ Latest GitHub release: $github_tag_raw (pre-release: $is_prerelease)"
+            is_prerelease="true"
           fi
+          echo "✓ Latest GitHub release: v$github_version (pre-release: $is_prerelease)"
           echo "GITHUB_VERSION=$github_version" >> $GITHUB_ENV
-          echo "GITHUB_TAG_RAW=$github_tag_raw" >> $GITHUB_ENV
           echo "GITHUB_IS_PRERELEASE=$is_prerelease" >> $GITHUB_ENV
       - name: Compare version metadata
         id: compare_versions

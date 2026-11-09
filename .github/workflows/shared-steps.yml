@@ -59,10 +59,25 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
-          release_url="https://api.github.com/repos/${{ github.repository }}/releases/latest"
-          response=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "$release_url")
-          echo "::debug::GitHub API response: $(jq -c . <<< "$response")"
-          github_version=$(echo "$response" | jq -r '.tag_name // "0.0.0"' | sed 's/^v//')
+          release_url="https://api.github.com/repos/${{ github.repository }}/releases?per_page=100"
+          response=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" "$release_url") || {
+            echo "::error::Failed to fetch releases from GitHub API"
+            exit 1
+          }
+          if ! jq -e 'type == "array"' <<< "$response" > /dev/null 2>&1; then
+            echo "::error::Unexpected GitHub API response: $(echo "$response" | head -c 300)"
+            exit 1
+          fi
+          echo "::debug::Releases received: $(jq 'length' <<< "$response")"
+          # 只比正式 release：beta 渠道已有同版本 tag 不能挡住正式包发布。
+          tags=$(jq -r '.[] | select(.draft == false and .prerelease == false and .tag_name != null) | .tag_name' <<< "$response" | sed -E 's/^v//; s/[-+].*$//' | grep -E '^[0-9]+(\.[0-9]+)*$' || true)
+          echo "::debug::Version tags: $(echo "$tags" | tr '\n' ' ')"
+          github_version=$(echo "$tags" | sort -V | tail -n1)
+          if [ -z "$github_version" ]; then
+            github_version="0.0.0"
+            echo "⚠ No releases found, using default version: v0.0.0"
+          fi
           echo "✓ Latest GitHub release: v$github_version"
           echo "GITHUB_VERSION=$github_version" >> $GITHUB_ENV
       - name: Compare version metadata

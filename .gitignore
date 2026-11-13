@@ -15,6 +15,7 @@ debug.js
 .vscode/
 .zcode/
 .workbuddy-ai/
+.agents/
 extract/
 
 installer/TermiusZh.conf

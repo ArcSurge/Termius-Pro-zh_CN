@@ -30,6 +30,8 @@ MIN_STRING_LENGTH = 4        # 下界：短于此长度的多为压缩后的符�
 MAX_STRING_LENGTH = 300      # 上界：更长的多为代码或数据块
 SPACE_REQUIRED_ABOVE = 20    # 超过此长度必须含空格，否则多为压缩后的标识符
 
+PROBE_SAMPLE_COUNT = 20      # 汉化探测的抽样条数（每条需一次全文件扫描）
+
 
 def scan_file_for_sentinel(file_path, chunk_size=1024 * 1024):
     """流式扫描文件是否包含熔丝哨兵字符串"""
@@ -411,11 +413,35 @@ class TermiusModifier:
         self.compiled_rules = []
         self.applied_rules = set()
 
+    def _looks_localized(self, asar_path):
+        """判断指定 asar 是否已被本地化（不含英文原文）"""
+        try:
+            rules = read_file(os.path.join(self._rules_dir, "localize.txt"))
+            with open(asar_path, "rb") as file:
+                content = file.read()
+        except (RuntimeError, OSError):
+            return False
+        originals = []
+        for line in rules:
+            if "|" not in line or is_comment_line(line):
+                continue
+            old_val, new_val = line.split("|", 1)
+            if not is_regex_pattern(old_val) and len(old_val) >= 8 \
+                    and any('\u4e00' <= ch <= '\u9fff' for ch in new_val):
+                originals.append(old_val)
+        if not originals:
+            return False
+        step = max(1, len(originals) // PROBE_SAMPLE_COUNT)
+        sample = [old.encode("utf-8") for old in originals[::step]][:PROBE_SAMPLE_COUNT]
+        present = sum(needle in content for needle in sample)
+        return present * 2 < len(sample)
+
     def create_backup(self):
         """创建初始备份（仅在备份不存在时）"""
-        if not os.path.exists(self._backup_path):
-            shutil.copy(self._original_path, self._backup_path)
-            logging.info("Initial backup created")
+        if os.path.exists(self._backup_path):
+            return
+        shutil.copy(self._original_path, self._backup_path)
+        logging.info("Initial backup created")
 
     def restore_backup(self):
         """从备份文件恢复原始 app.asar"""
@@ -754,6 +780,13 @@ class TermiusModifier:
             logging.debug(f"Unmatched rules:\n{rules_list}")
         else:
             logging.debug("All rules matched successfully")
+
+        if self._looks_localized(self._backup_path):
+            logging.warning(
+                "app.asar.bak contains a localized version rather than the original English one, "
+                "so the English text has already been lost and --restore cannot bring it back. "
+                "Reinstall Termius to get a clean original."
+            )
 
     def find_in_content(self):
         """在代码文件中搜索包含所有指定关键词的文件"""

@@ -237,12 +237,22 @@ def parse_replace_rule(rule):
 
 
 def get_asar_cmd():
-    """根据操作系统返回 asar 命令
+    """解析 asar 命令的绝对路径
 
-    Windows: asar.cmd
-    macOS/Linux: asar
+    Windows 下 npm 全局安装的是 asar.cmd；Linux/macOS 用 sudo 运行时
+    root 的 PATH 往往不含用户 npm 的全局 bin 目录，直接调用 'asar' 会
+    FileNotFoundError。这里先解析绝对路径，失败时给出明确的修复提示。
     """
-    return "asar.cmd" if is_windows() else "asar"
+    names = ("asar.cmd", "asar") if is_windows() else ("asar",)
+    for name in names:
+        resolved = shutil.which(name)
+        if resolved:
+            return resolved
+    logging.error(
+        "asar command not found in PATH. Install it with: npm install -g @electron/asar. "
+        "If running with sudo, preserve your PATH: sudo env \"PATH=$PATH\" python3 lang.py ..."
+    )
+    sys.exit(1)
 
 
 def run_command(cmd, shell=False):

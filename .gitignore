@@ -19,3 +19,5 @@ debug.js
 extract/
 
 installer/TermiusZh.conf
+tests/
+Temp/

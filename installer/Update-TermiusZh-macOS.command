@@ -81,7 +81,7 @@ sed -n '2,28p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 
-# 中断后不再等回车：第二次 Ctrl+C 只是为了回到提示符，却会卡在这里等输入。
+# 中断后不再等回车：第二次 Control+C 只是为了回到提示符，却会卡在这里等输入。
 pause_if_interactive() {
 [ "${INTERRUPTED:-0}" -eq 0 ] || return 0
 # 管道/自动化调用时不阻塞。
@@ -107,12 +107,12 @@ fi
 if [ "$rc" -ne 0 ]; then
 if [ "$INTERRUPTED" -eq 1 ]; then
 if [ -n "$DOWNLOAD" ] && [ -s "$DOWNLOAD" ] && [ -z "$sums_expected" ]; then
- printf '提示：已手动中断（Ctrl+C）。该版本没有官方校验值，重新运行会从头下载。\n' >&2
+ printf '提示：已手动中断（Control+C）。该版本没有官方校验值，重新运行会从头下载。\n' >&2
 elif [ -n "$DOWNLOAD" ] && [ -s "$DOWNLOAD" ]; then
  partial_size=$("$STAT" -f%z "$DOWNLOAD" 2>/dev/null || echo 0)
- printf '提示：已手动中断（Ctrl+C）。下载片段（%s）已保留，重新运行可续传。\n' "$(mb_text "$partial_size")" >&2
+ printf '提示：已手动中断（Control+C）。下载片段（%s）已保留，重新运行可续传。\n' "$(mb_text "$partial_size")" >&2
 else
- printf '提示：已手动中断（Ctrl+C）。\n' >&2
+ printf '提示：已手动中断（Control+C）。\n' >&2
 fi
 elif [ "$ASAR_WRITTEN" -eq 1 ]; then
  printf '汉化未完成（退出码 %s）：app.asar 已被替换。\n' "$rc" >&2

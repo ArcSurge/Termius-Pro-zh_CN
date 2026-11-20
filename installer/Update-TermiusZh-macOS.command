@@ -24,7 +24,7 @@
 #
 # 也可直接双击运行（.command 会在终端中打开）。
 # 只下载与本机版本号严格对应的包；该版本未发布时直接报错，不会退到相近版本。
-# 只用 macOS 自带工具：bash、curl、codesign、PlistBuddy、plutil、shasum、od。
+# 只用 macOS 自带工具：bash、curl、codesign、PlistBuddy、plutil、shasum、od、xattr。
 # 会替换 app.asar、更新 plist 里的 asar hash 并重新签名；不创建备份、不自动回滚。
 
 set -euo pipefail
@@ -206,6 +206,10 @@ done
 fi
 [ -n "$APP_PATH" ] || die "未找到 $APP_NAME.app。请确认已安装，或用 --app 指定路径。"
 [ -d "$APP_PATH" ] || die "应用路径不存在：$APP_PATH"
+# 统一为绝对路径，避免尾斜杠、点段及 CDPATH 干扰进程匹配。
+APP_PATH=$(CDPATH= cd "$APP_PATH" && pwd -P) || die "无法解析应用路径：$APP_PATH"
+# 转义 ERE 元字符并锚定命令行开头，避免匹配其它副本或无关参数。
+RUN_PATTERN="^$(printf '%s' "$APP_PATH/Contents/MacOS/" | sed 's/[][\.^$*+()?{}|]/\\&/g')"
 
 # 路径名与 beta 设置必须一致；装错版本会导致 Termius 打不开。
 case "$APP_PATH" in
@@ -246,11 +250,40 @@ DD=${DD:-/bin/dd}
 CUT=${CUT:-/usr/bin/cut}
 TR=${TR:-/usr/bin/tr}
 SUDO=${SUDO:-/usr/bin/sudo}
+XATTR=${XATTR:-/usr/bin/xattr}
 
+# pgrep 仅退出码 1 表示未运行；查询失败时禁止继续写入。
+require_not_running() {
+local rc=0
+"$PGREP" -f "$RUN_PATTERN" >/dev/null 2>&1 || rc=$?
+case "$rc" in
+0) die "$APP_NAME 正在运行，请先完全退出后再重试。" ;;
+1) return 0 ;;
+*) die "pgrep 查询失败（退出码 $rc），无法确认 $APP_NAME 运行状态。应用未被修改。" ;;
+esac
+}
+
+# asar 一致不代表上次重签已完成；--force 返回 0 也不代表签名有效，重签后仍要验签。
+require_valid_signature() {
+"$CODESIGN" --verify --deep --strict "$APP_PATH" >/dev/null 2>&1 \
+|| die "${1:-无法验证现有应用签名。请用官方安装包重新安装后重跑本脚本。}"
+}
+
+# 清 quarantine 尽力而为：无权修改时不能静默失败，需把补救命令交给用户。
+clear_quarantine_or_warn() {
+run_write "$XATTR" -dr com.apple.quarantine "$APP_PATH" 2>/dev/null && return 0
+# 标记本来就不存在时 xattr 同样返回非零，不能据此报警：确认它还在再提示。
+run_write "$XATTR" -p com.apple.quarantine "$APP_PATH" >/dev/null 2>&1 || return 0
+say "警告：未能清除 quarantine 下载标记（应用可能不属于当前用户）。"
+say "不影响汉化结果；但若启动时提示「Apple 无法验证」且无法放行，请执行："
+say "  sudo xattr -dr com.apple.quarantine \"$APP_PATH\""
+return 0
+}
+
+# --check 不写入任何文件，无需应用退出。
+if [ "$CHECK_ONLY" -eq 0 ]; then
 say "正在检查 $APP_NAME 是否运行…"
-# 不能在应用运行时改动它正在读取的文件。
-if "$PGREP" -x "$APP_NAME" >/dev/null 2>&1; then
-die "请先完全退出 $APP_NAME 再运行。"
+require_not_running
 fi
 
 # 默认取本机 .app 的版本；用 --version 显式指定时以指定值为准。
@@ -356,6 +389,7 @@ fi
 say "目标版本 : $APP_NAME"
 say "汉化包   : $asset_url"
 
+
 # 本机已装文件与官方包一致时跳过下载。
 skip_download=0
 if [ -n "$sums_expected" ]; then
@@ -415,7 +449,10 @@ return 0
 }
 
 if [ "$skip_download" -eq 1 ]; then
+require_not_running
+require_valid_signature
 say "本机 app.asar 已是该汉化包，无需改动。"
+clear_quarantine_or_warn
 remove_stale_cache "$CACHE_FILE"
 exit 0
 fi
@@ -516,9 +553,11 @@ fi
 DOWNLOAD=""
 fi
 
-# 下载内容与已装文件一致时不再写文件。
 if [ "$("$SHASUM" -a 256 "$ASAR" 2>/dev/null | "$CUT" -d ' ' -f 1)" = "$asset_hash" ]; then
+require_not_running
+require_valid_signature
 say "本机 app.asar 已是该汉化包，无需改动。"
+clear_quarantine_or_warn
 remove_stale_cache "$CACHE_FILE"
 exit 0
 fi
@@ -549,6 +588,9 @@ if [ "$NEED_SUDO" -eq 1 ]; then
 say "需要管理员权限，macOS 会提示输入密码。"
 "$SUDO" -v || die "未获得管理员权限。"
 fi
+
+# 下载可能耗时数分钟，写入前最后确认应用没有在运行。
+require_not_running
 
 say "正在替换 app.asar…"
 # ---- 替换 app.asar -------------------------------------------------------
@@ -630,7 +672,11 @@ update_bundle_hash "$APP_PATH"
 say "正在重新签名应用…"
 run_write "$CODESIGN" --force --sign - --deep --entitlements "$ENTITLEMENTS" "$APP_PATH" \
 || die "重新签名失败。"
+# --force 成功不代表签名可用：验证不通过时 app.asar 已经换过，不能清标记、清缓存或报完成。
+require_valid_signature "重新签名后无法验证应用签名。请用官方安装包重新安装，然后重跑本脚本。"
 
+# 清除下载标记，避免重签后的应用因 quarantine 被拦截；失败时与早退分支一样给出告警。
+clear_quarantine_or_warn
 [ -z "$DOWNLOAD" ] || "$RM" -f -- "$DOWNLOAD"
 remove_stale_cache "$CACHE_FILE"
 say "汉化完成，可以重新打开 ${APP_NAME}。"

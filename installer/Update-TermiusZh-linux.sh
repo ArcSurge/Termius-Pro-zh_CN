@@ -434,12 +434,14 @@ sha256sum -- "$1" 2>/dev/null | cut -d' ' -f1
 
 # ---- preflight -------------------------------------------------------------
 
-say "正在检查 $APP_LABEL 是否运行…"
 need_cmd curl
 need_cmd sha256sum
+# --check 不写入任何文件，无需应用退出。
+if [ "$CHECK_ONLY" -eq 0 ]; then
 need_cmd ps
-
+say "正在检查 $APP_LABEL 是否运行…"
 is_running
+fi
 
 if fuse_line=$(find_fuse "$EXE"); then
 :

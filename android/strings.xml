@@ -1664,7 +1664,6 @@ echo '$1' &gt;&gt; ~/.ssh/authorized_keys</string>
   <string name="optional_defaults_section_title">可选默认值</string>
   <string name="other">其他</string>
   <string name="otp_invalid_error">验证码无效</string>
-  <string name="otp_scheme_for_2fa_providers_app">otpauth://totp/%s:%s?secret=%s&amp;issuer=%s</string>
   <string name="outdate_bottom_sheet_description">请更新应用版本</string>
   <string name="outdate_bottom_sheet_title">专业版功能不可用</string>
   <string name="outdate_screen_description">你当前使用的应用版本过旧。请通过 Google Play 更新。
@@ -1695,7 +1694,6 @@ echo '$1' &gt;&gt; ~/.ssh/authorized_keys</string>
   <string name="password_toggle_content_description">显示密码</string>
   <string name="password_was_breached_message">此密码曾出现在数据泄露事件中，请勿使用！</string>
   <string name="paste">粘贴</string>
-  <string name="paste_code_in_2fa_provider_app_label">粘贴至双重认证应用</string>
   <string name="paste_ssh_certificate_from_clipboard">粘贴</string>
   <string name="paste_ssh_key">粘贴 SSH 密钥</string>
   <string name="paste_ssh_key_from_clipboard">粘贴</string>

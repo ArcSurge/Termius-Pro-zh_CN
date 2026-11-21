@@ -35,6 +35,7 @@ GITHUB_REPO_NAME = "APKEditor"
 APK_SIGN_PROPERTIES = "apk.sign.properties"
 ALIGNED_SUFFIX = "_aligned"
 SIGNED_SUFFIX = "_signed"
+IDSIG_SUFFIX = ".idsig"
 ZH_SUFFIX = "_zh"
 
 # ------------------------------ Log Configuration ------------------------------
@@ -540,6 +541,12 @@ class TermiusAPKModifier:
         if os.path.exists(build_apk_signed_file):
             os.remove(build_apk_signed_file)
 
+        # APK Signature Scheme v4 is not stored inside the APK: apksigner writes it to a
+        # separate .idsig file, and verify only checks it when given that file explicitly.
+        build_apk_idsig_file = build_apk_signed_file + IDSIG_SUFFIX
+        if os.path.exists(build_apk_idsig_file):
+            os.remove(build_apk_idsig_file)
+
         sign_props = self.sign_properties
         run_command([
             get_apksigner_shell(), 'sign',
@@ -547,15 +554,25 @@ class TermiusAPKModifier:
             '--ks-pass', f"pass:{sign_props['sign.keystore.password']}",
             '--ks-key-alias', sign_props["sign.key.alias"],
             '--key-pass', f"pass:{sign_props['sign.key.password']}",
+            '--v4-signing-enabled', 'true',
             '--out', build_apk_signed_file,
             build_apk_file
         ], log=False)
 
+        if not os.path.exists(build_apk_idsig_file):
+            raise Exception(f"APK Signature Scheme v4 signature file was not generated: {build_apk_idsig_file}")
+
         logger.info('APK signing completed')
         logger.info('Verifying APK signature')
-        run_command([get_apksigner_shell(), 'verify', '--verbose', build_apk_signed_file])
+        run_command([
+            get_apksigner_shell(), 'verify', '--verbose',
+            '--v4-signature-file', build_apk_idsig_file,
+            build_apk_signed_file
+        ])
         logger.info('APK signature verification completed')
 
+        # The .idsig sidecar is only needed for incremental install, which this tool does not produce.
+        os.remove(build_apk_idsig_file)
         os.remove(build_apk_file)
         shutil.move(str(build_apk_signed_file), str(build_apk_file))
 

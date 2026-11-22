@@ -54,21 +54,21 @@ python lang.py --extract
 
 ## 🔬 参数详解
 
-| 参数                | 简写   | 功能说明       | 示例                                  |
-|-------------------|------|------------|-------------------------------------|
-| `--beta`          | `-b` | 操作 Beta 版（默认操作正式版，两者 asar 不可混用） | `python lang.py -bl`               |
-| `--localize`      | `-l` | 汉化操作(默认)   | `python lang.py`                    |
-| `--trial`         | `-t` | 激活试用功能     | `python lang.py -lt`                |
-| `--skip-login`    | `-k` | 跳过登录验证     | `python lang.py -lk`                |
-| `--style`         | `-s` | 样式修改       | `python lang.py -ls`                |
-| `--restore`       | `-r` | 还原操作       | `python lang.py -r`                 |
-| `--find <关键词...>` | `-f` | 多条件联合搜索    | `python lang.py -f "term1" "term2"` |
-| `--extract`       | `-e` | 提取所有可能的字符串 | `python lang.py -e`                 |
-| `--verbose`       | `-v` | 设置日志级别     | `python lang.py -v DEBUG`           |
+| 参数                 | 简写 | 功能说明                                           | 示例                                |
+| -------------------- | ---- | -------------------------------------------------- | ----------------------------------- |
+| `--beta`             | `-b` | 操作 Beta 版（默认操作正式版，两者 asar 不可混用） | `python lang.py -bl`                |
+| `--localize`         | `-l` | 汉化操作(默认)                                     | `python lang.py`                    |
+| `--trial`            | `-t` | 激活试用功能                                       | `python lang.py -lt`                |
+| `--skip-login`       | `-k` | 跳过登录验证                                       | `python lang.py -lk`                |
+| `--style`            | `-s` | 样式修改                                           | `python lang.py -ls`                |
+| `--restore`          | `-r` | 还原操作                                           | `python lang.py -r`                 |
+| `--find <关键词...>` | `-f` | 多条件联合搜索                                     | `python lang.py -f "term1" "term2"` |
+| `--extract`          | `-e` | 提取所有可能的字符串                               | `python lang.py -e`                 |
+| `--verbose`          | `-v` | 设置日志级别                                       | `python lang.py -v DEBUG`           |
 
 ## 📂 相关文件结构
 
-```markdown
+```text
 rules/
 ├── trial.txt       # 试用功能规则(-t/--trial时加载)
 ├── localize.txt    # 汉化规则(-l/--localize时加载)
@@ -97,39 +97,25 @@ extract/
 如果仍想手动操作：
 
 1. 前往 [Releases][releases] 下载对应版本的 `app-xxx.asar` 文件。
-2. 找到 Termius 安装目录，通常位置为:
-  - **Windows**: `C:\Users\你的用户名\AppData\Local\Programs\Termius`。
-  - **Linux**: `/opt/Termius`。
-  - **MacOS**: `/Applications/Termius.app/Contents`。
+2. 找到 Termius 安装目录，通常位置如下：
+   - 正式版本：
+     - **Windows**: `C:\Users\你的用户名\AppData\Local\Programs\Termius`。
+     - **Linux**: `/opt/Termius`。
+     - **MacOS**: `/Applications/Termius.app/Contents`。
+   - Beta 版本：
+     - **Windows**: `C:\Users\你的用户名\AppData\Local\Programs\Termius Beta`。
+     - **Linux**: `/opt/Termius Beta`。
+     - **MacOS**: `/Applications/Termius Beta.app/Contents`。
 
-  <details>
-  <summary>对于 Beta 用户</summary>
-      
-  - **Windows**: `C:\Users\你的用户名\AppData\Local\Programs\Termius Beta`。
-  - **Linux**: `/opt/Termius Beta`。
-  - **MacOS**: `/Applications/Termius Beta.app/Contents`。
-      
-  </details>
-  
 3. 将下载的 `app-xxx.asar` 文件重命名为 `app.asar` 后覆盖 `resources` 文件夹下的 `app.asar` 文件。
-  - **macOS**：替换文件后运行 [osxfix.sh](macos/osxfix.sh) 更新文件 hash 并重新签名。汉化后第一次打开若被 Gatekeeper 拦截（提示「Apple 无法验证」），点「完成」→ 系统设置 → 隐私与安全性 → 仍要打开，放行一次即可。
-  - **注意**，新版 Termius 启用了 asar 完整性校验，Windows/Linux 需先关闭该熔丝方可启动（详见 [FAQ Q3](#q3-替换-appasar-后应用无法启动integrity-check-failed)）：
-    ```bash
-    npx @electron/fuses write --app "C:\Users\你的用户名\AppData\Local\Programs\Termius\Termius.exe" EnableEmbeddedAsarIntegrityValidation=off
-    ```
-    <details>
-      <summary>Termius Beta 用户请执行此命令</summary>
-      
-      ``` shell
-      npx @electron/fuses write --app "C:\Users\你的用户名\AppData\Local\Programs\Termius Beta\Termius Beta.exe" EnableEmbeddedAsarIntegrityValidation=off
-      ```
-    </details>
+   - **macOS**：替换文件后运行 [osxfix.sh](macos/osxfix.sh) 更新文件 hash 并重新签名。汉化后第一次打开若被 Gatekeeper 拦截（提示「Apple 无法验证」），点「完成」→ 系统设置 → 隐私与安全性 → 仍要打开，放行一次即可。
+   - **注意**，新版 Termius 启用了 asar 完整性校验，Windows/Linux 需先关闭该熔丝方可启动（详见 [FAQ Q3](#q3-替换-appasar-后应用无法启动integrity-check-failed)）。
 
 4. 如果你不想自动更新，请删除 `app-update.yml` 文件。
-5. 最后，如果没有想要的版本，可在 [Fork][fork] 本项目后前往仓库的 **Settings > Secrets and variables > Actions > Variables** 页面定义变量:
-  - **Name**: `RELEASE_LIST`
-  - **Value**: `l,lk,lt`
-  - 默认`l,lk,lt`，代表生成三个版本，l为汉化，lt为汉化+试用，lk为汉化+跳过登录。可自行修改，通过逗号分隔。
+5. 最后，如果没有想要的版本，可在 [Fork][fork] 本项目后前往仓库的 **Settings > Secrets and variables > Actions > Variables** 页面定义变量：
+   - **Name**: `RELEASE_LIST`
+   - **Value**: `l,lk,lt`
+   - 默认 `l,lk,lt`，代表生成三个版本，l为汉化，lt为汉化+试用，lk为汉化+跳过登录。可自行修改，通过逗号分隔。
 
 ## 📱 关于安卓版
 
@@ -138,38 +124,48 @@ extract/
 - 若你计划 [Fork][fork] 此项目，请在 [Fork][fork] 后前往仓库的 **Settings > Secrets and variables > Actions > Secrets** 页面，点击 <kbd>New repository secret</kbd> 定义私密变量。
   - **Name**: `APK_SIGN_PROPERTIES`
   - **Value**: 填写 [apk.sign.properties.example](android/apk.sign.properties.example) 文件内容（请根据需要修改文件内容）
-
-- 可选配置（`Github Action`）：
+- 可选配置（GitHub Actions）：
   - 添加自定义签名文件，可以覆盖安装 apk
-  - 首先通过命令生成一个.jks签名文件
-      ```bash
-    # 然后通过命令编码成一个 Base64 的文件
-    base64 -w 0 Termius_zh.jks > Termius_zh_base64.txt
-      ```
-  - 后前往仓库的 **Settings > Secrets and variables > Actions > Secrets** 页面，点击 <kbd>New repository secret</kbd> 定义私密变量。
+  - 首先通过命令生成一个 `.jks` 签名文件：
 
+    ```bash
+    keytool -genkeypair -alias Termius_zh -keyalg RSA -keysize 2048 -validity 10000 -keystore Termius_zh.jks -storepass android -keypass android -dname "CN=ArcSurge,C=CN"
+    ```
+
+    别名、文件名、密码与 `-dname` 需与 [apk.sign.properties.example](android/apk.sign.properties.example) 中的 `sign.key.alias`、`sign.keystore`、`sign.*.password`、`sign.key.dname.*` 保持一致。
+
+  - 然后通过命令编码成一个 Base64 的文件：
+
+    ```bash
+    base64 -w 0 Termius_zh.jks > Termius_zh_base64.txt
+    ```
+
+  - 后前往仓库的 **Settings > Secrets and variables > Actions > Secrets** 页面，点击 <kbd>New repository secret</kbd> 定义私密变量。
   - **Name**: `SIGNING_KEY`
-  - **Value**: 填写 [Termius_zh_base64.txt](Base64生成的文件) 文件内容（请根据需要修改文件内容）
+  - **Value**: 填写 `Termius_zh_base64.txt` 文件内容（请根据需要修改文件内容）
 
 ### 🤖 关于脚本
 
 - 安卓相关资源均存放在 [android](android) 目录下。
 - 所需工具：
   - python（运行环境）
-  - zipalign（对齐工具 `sudo apt install -y zipalign` 安装）
-  - apksigner（签名工具 `sudo apt install -y apksigner` 安装）
-  - keytool（密钥生成工具，集成在 JDK 中）
+  - keytool（密钥生成工具，集成在 JDK 中；下面的 `sdkmanager` 也需要 JDK）
+  - zipalign（对齐工具）、apksigner（签名工具），按平台安装：
+    - **Debian / Ubuntu**：`sudo apt install -y zipalign apksigner`
+    - **macOS**：`brew install --cask android-commandlinetools`（自带 `sdkmanager`，需先装 JDK，如 `brew install --cask temurin`），然后 `sdkmanager "build-tools;36.0.0"`
+    - **Windows**：从 [commandline-tools](https://developer.android.com/studio#command-tools) 下载解压，然后 `cmdline-tools\bin\sdkmanager.bat "build-tools;36.0.0"`
+    - 两者都装在 `<SDK>/build-tools/<版本>/` 下，需把该目录加入 `PATH`；Windows 下对应 `zipalign.exe`、`apksigner.bat`，脚本会按平台自动选择。版本号可换成 `sdkmanager --list` 里的任意 `build-tools` 版本。
 - 运行：
-   ```bash
-   # 进入安卓目录
-   cd android
-   # 配置签名信息（请自行修改内容）
-   mv apk.sign.properties.example apk.sign.properties
-   # 安装依赖
-   pip install -r requirements.txt
-   # 运行脚本
-   python apktools.py
-   ```
+  ```bash
+  # 进入安卓目录
+  cd android
+  # 配置签名信息（请自行修改内容）
+  mv apk.sign.properties.example apk.sign.properties
+  # 安装依赖
+  pip install -r requirements.txt
+  # 运行脚本
+  python apktools.py
+  ```
 
 ## 📖 常见问题
 
@@ -214,17 +210,16 @@ extract/
 
 - 使用脚本汉化：`lang.py` 会自动关闭该校验，无需额外操作。
 - 手动汉化：需先用 `@electron/fuses` 关闭熔丝（以 Windows 为例，macOS/Linux 路径见上方手动汉化章节）：
+
   ```bash
   npx @electron/fuses write --app "C:\Users\你的用户名\AppData\Local\Programs\Termius\Termius.exe" EnableEmbeddedAsarIntegrityValidation=off
   ```
 
-  <details>
-      <summary>Termius Beta 用户请执行此命令</summary>
-    
-     ``` shell
-      npx @electron/fuses write --app "C:\Users\你的用户名\AppData\Local\Programs\Termius Beta\Termius Beta.exe" EnableEmbeddedAsarIntegrityValidation=off
-     ```
-  </details>
+  Termius Beta 用户请执行此命令：
+
+  ```bash
+  npx @electron/fuses write --app "C:\Users\你的用户名\AppData\Local\Programs\Termius Beta\Termius Beta.exe" EnableEmbeddedAsarIntegrityValidation=off
+  ```
 
 - macOS 无需此操作，运行 [osxfix.sh](macos/osxfix.sh) 更新预期 hash 即可。
 
@@ -258,12 +253,11 @@ extract/
 - 保留随时终止项目的权利。
 
 <!-- LINK -->
+
 [termius]: https://termius.com
 [consideration]: https://ideas.termius.com/tabs/1-under-consideration
 [localization]: https://ideas.termius.com/c/82-chinese-localization
 [releases]: https://github.com/ArcSurge/Termius-Pro-zh_CN/releases
 [fork]: https://github.com/ArcSurge/Termius-Pro-zh_CN/fork
-[secrets]: https://github.com/ArcSurge/Termius-Pro-zh_CN/settings/secrets/actions
-[variables]: https://github.com/ArcSurge/Termius-Pro-zh_CN/settings/variables/actions
-[actions]: https://github.com/ArcSurge/Termius-Pro-zh_CN/actions
 [localize-android]: https://github.com/ArcSurge/Termius-Pro-zh_CN/actions/workflows/localize-android.yml
+

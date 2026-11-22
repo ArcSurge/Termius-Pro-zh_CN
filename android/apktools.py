@@ -183,7 +183,11 @@ class CloudScraperWrapper:
             return False
 
         elif isinstance(e, HTTPError):
-            status = e.response.status_code
+            response = e.response
+            if response is None:
+                self._log(f"HTTP error without a response: {str(e)}", "ERROR")
+                return False
+            status = response.status_code
             if status in (429, 500, 502, 503, 504):  # Retryable status codes
                 self._log(f"HTTP error {status} (Attempt {attempt + 1}/{self.max_retries}): {str(e)}", "WARNING")
                 return attempt < self.max_retries - 1
